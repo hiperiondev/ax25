@@ -1,3 +1,29 @@
+/*
+ * Copyright 2025 Emiliano Augusto Gonzalez (egonzalez . hiperion @ gmail . com))
+ * * Project Site: https://github.com/hiperiondev/ax25 *
+ *
+ * This is based on other projects:
+ *    Asynchronous AX.25 library using asyncio: https://github.com/sjlongland/aioax25/
+ *
+ *    please contact their authors for more information.
+ *
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3, or (at your option)
+ * any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this software; see the file COPYING.  If not, write to
+ * the Free Software Foundation, Inc., 51 Franklin Street,
+ * Boston, MA 02110-1301, USA.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -385,11 +411,13 @@ void ax25_frame_header_free(ax25_frame_header_t *header) {
  *                    or NULL if decoding fails or memory allocation fails.
  */
 ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128) {
-    if (len < 14)
+    if (len < 14) {
         return NULL; // Minimum header size
+    }
     header_decode_result_t hdr_result = ax25_frame_header_decode(data, len);
-    if (!hdr_result.header)
+    if (!hdr_result.header) {
         return NULL;
+    }
 
     if (hdr_result.remaining_len == 0) {
         ax25_frame_header_free(hdr_result.header);
@@ -444,6 +472,7 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128) 
     }
 
     ax25_frame_header_free(hdr_result.header);
+
     return frame;
 }
 
