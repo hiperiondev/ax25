@@ -165,9 +165,9 @@ typedef struct {
 typedef struct AX25XIDParameter ax25_xid_parameter_t;
 typedef struct AX25XIDParameter {
     int pi;
-    uint8_t* (*encode)(const ax25_xid_parameter_t*, size_t*);
-    ax25_xid_parameter_t* (*copy)(const ax25_xid_parameter_t*);
-    void (*free)(ax25_xid_parameter_t*);
+    uint8_t* (*encode)(const ax25_xid_parameter_t*, size_t*, uint8_t *err);
+    ax25_xid_parameter_t* (*copy)(const ax25_xid_parameter_t*, uint8_t *err);
+    void (*free)(ax25_xid_parameter_t*, uint8_t *err);
     void *data;
 } ax25_xid_parameter_t;
 
@@ -207,7 +207,7 @@ typedef struct {
  * @return AX25Address* Pointer to a newly allocated AX25Address structure containing
  *                      the decoded address, or NULL if memory allocation fails.
  */
-ax25_address_t* ax25_address_decode(const uint8_t *data);
+ax25_address_t* ax25_address_decode(const uint8_t *data, uint8_t *err);
 
 /**
  * @brief Creates an AX25Address structure from a string representation.
@@ -220,7 +220,7 @@ ax25_address_t* ax25_address_decode(const uint8_t *data);
  * @return AX25Address* Pointer to a newly allocated AX25Address structure, or NULL if
  *                      memory allocation fails or the string is malformed.
  */
-ax25_address_t* ax25_address_from_string(const char *str);
+ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err);
 
 /**
  * @brief Encodes an AX25Address structure into a 7-byte binary array.
@@ -234,7 +234,7 @@ ax25_address_t* ax25_address_from_string(const char *str);
  * @return uint8_t* Pointer to a dynamically allocated 7-byte array containing the encoded address,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_address_encode(const ax25_address_t *addr, size_t *len);
+uint8_t* ax25_address_encode(const ax25_address_t *addr, size_t *len, uint8_t *err);
 
 /**
  * @brief Creates a deep copy of an AX25Address structure.
@@ -246,7 +246,7 @@ uint8_t* ax25_address_encode(const ax25_address_t *addr, size_t *len);
  * @return AX25Address* Pointer to the newly allocated copy of the address, or NULL if
  *                      memory allocation fails.
  */
-ax25_address_t* ax25_address_copy(const ax25_address_t *addr);
+ax25_address_t* ax25_address_copy(const ax25_address_t *addr, uint8_t *err);
 
 /**
  * @brief Frees the memory allocated for an AX25Address structure.
@@ -256,7 +256,7 @@ ax25_address_t* ax25_address_copy(const ax25_address_t *addr);
  *
  * @param addr Pointer to the AX25Address structure to free. If NULL, the function does nothing.
  */
-void ax25_address_free(ax25_address_t *addr);
+void ax25_address_free(ax25_address_t *addr, uint8_t *err);
 
 // AX25Path Functions
 
@@ -271,7 +271,7 @@ void ax25_address_free(ax25_address_t *addr);
  * @return AX25Path* Pointer to the newly allocated AX25Path structure, or NULL if memory
  *                   allocation fails.
  */
-ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num);
+ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num, uint8_t *err);
 
 /**
  * @brief Frees the memory allocated for an AX25Path structure.
@@ -281,7 +281,7 @@ ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num);
  *
  * @param path Pointer to the AX25Path structure to free. If NULL, the function does nothing.
  */
-void ax25_path_free(ax25_path_t *path);
+void ax25_path_free(ax25_path_t *path, uint8_t *err);
 
 // AX25FrameHeader Functions
 
@@ -297,7 +297,7 @@ void ax25_path_free(ax25_path_t *path);
  * @return HeaderDecodeResult Structure containing the decoded header (or NULL on failure),
  *                            a pointer to the remaining data, and its length.
  */
-header_decode_result_t ax25_frame_header_decode(const uint8_t *data, size_t len);
+header_decode_result_t ax25_frame_header_decode(const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25FrameHeader into a binary array.
@@ -311,7 +311,7 @@ header_decode_result_t ax25_frame_header_decode(const uint8_t *data, size_t len)
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded header,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len);
+uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len, uint8_t *err);
 
 /**
  * @brief Frees the memory allocated for an AX25FrameHeader structure.
@@ -321,7 +321,7 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
  *
  * @param header Pointer to the AX25FrameHeader structure to free. If NULL, the function does nothing.
  */
-void ax25_frame_header_free(ax25_frame_header_t *header);
+void ax25_frame_header_free(ax25_frame_header_t *header, uint8_t *err);
 
 // AX25Frame Functions
 
@@ -341,7 +341,7 @@ void ax25_frame_header_free(ax25_frame_header_t *header);
  * @return AX25Frame* Pointer to a newly allocated AX25Frame structure of the appropriate subtype,
  *                    or NULL if decoding fails or memory allocation fails.
  */
-ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128);
+ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, uint8_t *err);
 
 /**
  * @brief Encodes an AX25Frame into a binary array.
@@ -355,7 +355,7 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128);
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if encoding or memory allocation fails.
  */
-uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len);
+uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err);
 
 /**
  * @brief Frees the memory allocated for an AX25Frame structure and its associated data.
@@ -365,7 +365,7 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len);
  *
  * @param frame Pointer to the AX25Frame structure to free. If NULL, the function does nothing.
  */
-void ax25_frame_free(ax25_frame_t *frame);
+void ax25_frame_free(ax25_frame_t *frame, uint8_t *err);
 
 // AX25RawFrame Functions
 
@@ -380,7 +380,7 @@ void ax25_frame_free(ax25_frame_t *frame);
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the payload,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len);
+uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25UnnumberedFrame Functions
 
@@ -398,7 +398,7 @@ uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len);
  * @return AX25UnnumberedFrame* Pointer to a newly allocated unnumbered frame structure,
  *                              or NULL if decoding fails or memory allocation fails.
  */
-ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *header, uint8_t control, const uint8_t *data, size_t len);
+ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *header, uint8_t control, const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25UnnumberedFrame into a binary array.
@@ -411,7 +411,7 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the control byte,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size_t *len);
+uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25UnnumberedInformationFrame Functions
 
@@ -428,7 +428,7 @@ uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size
  * @return AX25UnnumberedInformationFrame* Pointer to the decoded UI frame, or NULL if
  *                                         decoding fails or memory allocation fails.
  */
-ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len);
+ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25UnnumberedInformationFrame into a binary array.
@@ -441,7 +441,7 @@ ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_information_frame_t *frame, size_t *len);
+uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_information_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25FrameRejectFrame Functions
 
@@ -458,7 +458,7 @@ uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_informat
  * @return AX25FrameRejectFrame* Pointer to the decoded FRMR frame, or NULL if decoding fails
  *                               or memory allocation fails.
  */
-ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len);
+ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25FrameRejectFrame into a binary array.
@@ -471,7 +471,7 @@ ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *h
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, size_t *len);
+uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25InformationFrame Functions
 
@@ -489,7 +489,7 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
  * @return ax25_information_frame_t* Pointer to the decoded I frame, or NULL if decoding fails
  *                               or memory allocation fails.
  */
-ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit);
+ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit, uint8_t *err);
 
 /**
  * @brief Encodes an AX25InformationFrame into a binary array.
@@ -502,7 +502,7 @@ ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *hea
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_information_frame_encode(const ax25_information_frame_t *frame, size_t *len);
+uint8_t* ax25_information_frame_encode(const ax25_information_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25SupervisoryFrame Functions
 
@@ -518,7 +518,7 @@ uint8_t* ax25_information_frame_encode(const ax25_information_frame_t *frame, si
  * @return ax25_supervisory_frame_t* Pointer to the decoded S frame, or NULL if decoding fails
  *                               or memory allocation fails.
  */
-ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *header, uint16_t control, bool is_16bit);
+ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *header, uint16_t control, bool is_16bit, uint8_t *err);
 
 /**
  * @brief Encodes an AX25SupervisoryFrame into a binary array.
@@ -531,7 +531,7 @@ ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *hea
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, size_t *len);
+uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25XIDParameter Functions
 
@@ -547,7 +547,7 @@ uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, si
  * @return AX25XIDParameter* Pointer to the newly allocated XID parameter, or NULL if memory
  *                           allocation fails.
  */
-ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size_t pv_len);
+ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size_t pv_len, uint8_t *err);
 
 /**
  * @brief Encodes a raw XID parameter into a binary array.
@@ -561,7 +561,7 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded parameter,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t *len);
+uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t *len, uint8_t *err);
 
 /**
  * @brief Creates a deep copy of a raw XID parameter.
@@ -573,7 +573,7 @@ uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t
  * @return AX25XIDParameter* Pointer to the newly allocated copy, or NULL if memory
  *                           allocation fails.
  */
-ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *param);
+ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *param, uint8_t *err);
 
 /**
  * @brief Frees the memory allocated for a raw XID parameter.
@@ -583,7 +583,7 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *pa
  *
  * @param param Pointer to the AX25XIDParameter structure to free. If NULL, the function does nothing.
  */
-void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param);
+void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param, uint8_t *err);
 
 /**
  * @brief Decodes an XID parameter from binary data.
@@ -597,7 +597,7 @@ void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param);
  * @return AX25XIDParameter* Pointer to the decoded XID parameter, or NULL if decoding fails
  *                           or memory allocation fails.
  */
-ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len, size_t *consumed);
+ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len, size_t *consumed, uint8_t *err);
 
 // AX25ExchangeIdentificationFrame Functions
 
@@ -614,7 +614,7 @@ ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len,
  * @return AX25ExchangeIdentificationFrame* Pointer to the decoded XID frame, or NULL if
  *                                          decoding fails or memory allocation fails.
  */
-ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len);
+ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25ExchangeIdentificationFrame into a binary array.
@@ -627,7 +627,7 @@ ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_exchange_identification_frame_encode(const ax25_exchange_identification_frame_t *frame, size_t *len);
+uint8_t* ax25_exchange_identification_frame_encode(const ax25_exchange_identification_frame_t *frame, size_t *len, uint8_t *err);
 
 // AX25TestFrame Functions
 
@@ -643,7 +643,7 @@ uint8_t* ax25_exchange_identification_frame_encode(const ax25_exchange_identific
  * @param len Length of the payload data in bytes.
  * @return AX25TestFrame* Pointer to the decoded TEST frame, or NULL if memory allocation fails.
  */
-ax25_test_frame_t* ax25_test_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len);
+ax25_test_frame_t* ax25_test_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
 
 /**
  * @brief Encodes an AX25TestFrame into a binary array.
@@ -656,7 +656,7 @@ ax25_test_frame_t* ax25_test_frame_decode(ax25_frame_header_t *header, bool pf, 
  * @return uint8_t* Pointer to a dynamically allocated byte array containing the encoded frame,
  *                  or NULL if memory allocation fails.
  */
-uint8_t* ax25_test_frame_encode(const ax25_test_frame_t *frame, size_t *len);
+uint8_t* ax25_test_frame_encode(const ax25_test_frame_t *frame, size_t *len, uint8_t *err);
 
 /**
  * @brief Creates an XID parameter for Class of Procedures (COP).
@@ -675,7 +675,7 @@ uint8_t* ax25_test_frame_encode(const ax25_test_frame_t *frame, size_t *len);
  * @return AX25XIDParameter* Pointer to the new XID parameter, or NULL if memory allocation fails.
  */
 ax25_xid_parameter_t* ax25_xid_class_of_procedures_new(bool a_flag, bool b_flag, bool c_flag, bool d_flag, bool e_flag, bool f_flag, bool g_flag,
-        uint8_t reserved);
+        uint8_t reserved, uint8_t *err);
 
 /**
  * @brief Creates an XID parameter for HDLC Optional Functions.
@@ -711,7 +711,7 @@ ax25_xid_parameter_t* ax25_xid_class_of_procedures_new(bool a_flag, bool b_flag,
 ax25_xid_parameter_t* ax25_xid_hdlc_optional_functions_new( bool rnr, bool rej, bool srej, bool sabm, bool sabme, bool dm, bool disc, bool ua, bool frmr,
         bool ui,
         bool xid, bool test, bool modulo8, bool modulo128, bool res1, bool res2, bool res3, bool res4, bool res5, bool res6, bool res7, uint8_t reserved,
-        bool ext);
+        bool ext, uint8_t *err);
 
 /**
  * @brief Creates an XID parameter with a big-endian integer value.
@@ -724,7 +724,7 @@ ax25_xid_parameter_t* ax25_xid_hdlc_optional_functions_new( bool rnr, bool rej, 
  * @param length The number of bytes to use for the value (1, 2, or 4).
  * @return AX25XIDParameter* Pointer to the new XID parameter, or NULL if memory allocation fails.
  */
-ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t length);
+ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t length, uint8_t *err);
 
 /**
  * @brief Initializes default XID parameters for AX.25 versions 2.0 and 2.2.
@@ -733,6 +733,6 @@ ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t len
  * including Class of Procedures, HDLC Optional Functions, and various numeric parameters.
  * It should be called once during program initialization.
  */
-void ax25_xid_init_defaults();
+void ax25_xid_init_defaults(uint8_t *err);
 
 #endif /* AX25_H_ */
