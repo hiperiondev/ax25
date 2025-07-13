@@ -57,7 +57,7 @@ static uint8_t* uint_encode(uint32_t value, bool big_endian, size_t length, size
     *err = 0;
 
     uint8_t *bytes = malloc(length);
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -108,7 +108,7 @@ ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err) {
     *err = 0;
     ax25_address_t *addr = malloc(sizeof(ax25_address_t));
 
-    if (!addr){
+    if (!addr) {
         *err = 1;
         return NULL;
     }
@@ -136,7 +136,7 @@ uint8_t* ax25_address_encode(const ax25_address_t *addr, size_t *len, uint8_t *e
     *err = 0;
     uint8_t *bytes = malloc(7);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -163,7 +163,7 @@ ax25_address_t* ax25_address_copy(const ax25_address_t *addr, uint8_t *err) {
     *err = 0;
     ax25_address_t *copy = malloc(sizeof(ax25_address_t));
 
-    if (!copy){
+    if (!copy) {
         *err = 1;
         return NULL;
     }
@@ -181,7 +181,7 @@ ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num, uint8_t *err) {
     *err = 0;
     ax25_path_t *path = malloc(sizeof(ax25_path_t));
 
-    if (!path){
+    if (!path) {
         *err = 1;
         return NULL;
     }
@@ -252,7 +252,7 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
     size_t total_len = 7 * (2 + header->repeaters.num_repeaters);
     uint8_t *bytes = malloc(total_len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -374,7 +374,7 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
     size_t header_len, payload_len;
     uint8_t *header_bytes = ax25_frame_header_encode(&frame->header, &header_len, err);
 
-    if (!header_bytes){
+    if (!header_bytes) {
         *err = 1;
         return NULL;
     }
@@ -449,7 +449,7 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
 void ax25_frame_free(ax25_frame_t *frame, uint8_t *err) {
     *err = 0;
 
-    if (!frame){
+    if (!frame) {
         *err = 1;
         return;
     }
@@ -488,7 +488,7 @@ uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len, uint8
     *len = frame->payload_len;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -500,16 +500,29 @@ uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len, uint8
 ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *header, uint8_t control, const uint8_t *data, size_t len, uint8_t *err) {
     uint8_t modifier = control & 0xEF;
     bool pf = (control & POLL_FINAL_8BIT) != 0;
+    ax25_unnumbered_frame_t *result = NULL;
 
     switch (modifier) {
         case 0x03: // UI
-            return (ax25_unnumbered_frame_t*) ax25_unnumbered_information_frame_decode(header, pf, data, len, err);
+            result = (ax25_unnumbered_frame_t*) ax25_unnumbered_information_frame_decode(header, pf, data, len, err);
+            if (*err != 0)
+                *err = 1;
+            return result;
         case 0x87: // FRMR
-            return (ax25_unnumbered_frame_t*) ax25_frame_reject_frame_decode(header, pf, data, len, err);
+            result = (ax25_unnumbered_frame_t*) ax25_frame_reject_frame_decode(header, pf, data, len, err);
+            if (*err != 0)
+                *err = 2;
+            return result;
         case 0xAF: // XID
-            return (ax25_unnumbered_frame_t*) ax25_exchange_identification_frame_decode(header, pf, data, len, err);
+            result = (ax25_unnumbered_frame_t*) ax25_exchange_identification_frame_decode(header, pf, data, len, err);
+            if (*err != 0)
+                *err = 3;
+            return result;
         case 0xE3: // TEST
-            return (ax25_unnumbered_frame_t*) ax25_test_frame_decode(header, pf, data, len, err);
+            result = (ax25_unnumbered_frame_t*) ax25_test_frame_decode(header, pf, data, len, err);
+            if (*err != 0)
+                *err = 4;
+            return result;
         case 0x2F: // SABM
         case 0x6F: // SABME
         case 0x43: // DISC
@@ -517,13 +530,13 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
         case 0x63: // UA
         break;
         default:
-            *err = 1;
+            *err = 5;
             return NULL;
     }
 
     ax25_unnumbered_frame_t *frame = malloc(sizeof(ax25_unnumbered_frame_t));
 
-    if (!frame){
+    if (!frame) {
         *err = 2;
         return NULL;
     }
@@ -544,7 +557,7 @@ uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size
     *len = 1;
     uint8_t *bytes = malloc(1);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -554,17 +567,18 @@ uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size
     return bytes;
 }
 
-ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err) {
+ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len,
+        uint8_t *err) {
     *err = 0;
 
-    if (len < 1){
+    if (len < 1) {
         *err = 1;
         return NULL;
     }
 
     ax25_unnumbered_information_frame_t *frame = malloc(sizeof(ax25_unnumbered_information_frame_t));
 
-    if (!frame){
+    if (!frame) {
         *err = 2;
         return NULL;
     }
@@ -595,7 +609,7 @@ uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_informat
     *len = 1 + 1 + frame->payload_len;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -610,14 +624,14 @@ uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_informat
 ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err) {
     *err = 0;
 
-    if (len != 3){
+    if (len != 3) {
         *err = 1;
         return NULL;
     }
 
     ax25_frame_reject_frame_t *frame = malloc(sizeof(ax25_frame_reject_frame_t));
 
-    if (!frame){
+    if (!frame) {
         *err = 2;
         return NULL;
     }
@@ -645,7 +659,7 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
     *len = 4;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -658,17 +672,18 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
     return bytes;
 }
 
-ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit, uint8_t *err) {
+ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit,
+        uint8_t *err) {
     *err = 0;
 
-    if (len < 1){
+    if (len < 1) {
         *err = 1;
         return NULL;
     }
 
     ax25_information_frame_t *frame = malloc(sizeof(ax25_information_frame_t));
 
-    if (!frame){
+    if (!frame) {
         *err = 2;
         return NULL;
     }
@@ -700,7 +715,7 @@ uint8_t* ax25_information_frame_encode(const ax25_information_frame_t *frame, si
     *len = (is_16bit ? 2 : 1) + 1 + frame->payload_len;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -763,7 +778,7 @@ ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *hea
     }
 
     ax25_supervisory_frame_t *frame = malloc(sizeof(ax25_supervisory_frame_t));
-    if (!frame){
+    if (!frame) {
         *err = 2;
         return NULL;
     }
@@ -784,7 +799,7 @@ uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, si
     *len = is_16bit ? 2 : 1;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -804,7 +819,7 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size
     *err = 0;
     ax25_xid_parameter_t *param = malloc(sizeof(ax25_xid_parameter_t));
 
-    if (!param){
+    if (!param) {
         *err = 1;
         return NULL;
     }
@@ -837,7 +852,7 @@ uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t
     *len = 2 + pv_len;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -861,7 +876,7 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *pa
 void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param, uint8_t *err) {
     *err = 0;
 
-    if (!param){
+    if (!param) {
         *err = 1;
         return;
     }
@@ -873,20 +888,20 @@ void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param, uint8_t *err) {
 ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len, size_t *consumed, uint8_t *err) {
     *err = 0;
 
-    if (len < 2){
+    if (len < 2) {
         *err = 1;
         return NULL;
     }
 
     int pi = data[0];
     size_t pv_len = data[1];
-    if (len < 2 + pv_len){
+    if (len < 2 + pv_len) {
         *err = 2;
         return NULL;
     }
 
     ax25_xid_parameter_t *param = ax25_xid_raw_parameter_new(pi, data + 2, pv_len, err);
-    if (!param){
+    if (!param) {
         *err = 3;
         return NULL;
     }
@@ -896,10 +911,11 @@ ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len,
     return param;
 }
 
-ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err) {
+ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len,
+        uint8_t *err) {
     *err = 0;
 
-    if (len < 4){
+    if (len < 4) {
         *err = 1;
         return NULL;
     }
@@ -908,7 +924,7 @@ ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(
     uint8_t gi = data[1];
     uint16_t gl = uint_decode(data + 2, 2, true, err);
 
-    if (len - 4 != gl){
+    if (len - 4 != gl) {
         *err = 2;
         return NULL;
     }
@@ -1028,7 +1044,7 @@ ax25_test_frame_t* ax25_test_frame_decode(ax25_frame_header_t *header, bool pf, 
     *err = 0;
 
     ax25_test_frame_t *frame = malloc(sizeof(ax25_test_frame_t));
-    if (!frame){
+    if (!frame) {
         *err = 1;
         return NULL;
     }
@@ -1057,7 +1073,7 @@ uint8_t* ax25_test_frame_encode(const ax25_test_frame_t *frame, size_t *len, uin
     *len = 1 + frame->payload_len;
     uint8_t *bytes = malloc(*len);
 
-    if (!bytes){
+    if (!bytes) {
         *err = 1;
         return NULL;
     }
@@ -1099,7 +1115,7 @@ ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t len
     *err = 0;
     size_t len;
     uint8_t *pv = uint_encode(value, true, length, &len, err);
-    if (!pv){
+    if (!pv) {
         *err = 1;
         return NULL;
     }

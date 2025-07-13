@@ -82,7 +82,7 @@ int test_address_functions() {
 int test_path_functions() {
     ax25_address_t *addr1 = ax25_address_from_string("NOCALL-0", &err);
     ax25_address_t *addr2 = ax25_address_from_string("REPEATER-1", &err);
-    ax25_address_t *repeaters[] = {addr1, addr2};
+    ax25_address_t *repeaters[] = { addr1, addr2 };
     ax25_path_t *path = ax25_path_new(repeaters, 2, &err);
     TEST_ASSERT(path != NULL, "ax25_path_new should return non-NULL", err);
     ax25_path_free(path, &err);
@@ -92,8 +92,7 @@ int test_path_functions() {
 }
 
 int test_frame_header_functions() {
-    uint8_t header_data[] = {0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                             0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1};
+    uint8_t header_data[] = { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 };
     header_decode_result_t result = ax25_frame_header_decode(header_data, sizeof(header_data), &err);
     TEST_ASSERT(result.header != NULL, "ax25_frame_header_decode should return non-NULL header", err);
     if (result.header) {
@@ -101,62 +100,59 @@ int test_frame_header_functions() {
         uint8_t *encoded = ax25_frame_header_encode(result.header, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_frame_header_encode should return non-NULL", err);
         TEST_ASSERT(len == sizeof(header_data), "Encoded header length should match input", err);
-        if (encoded) free(encoded);
+        if (encoded)
+            free(encoded);
         ax25_frame_header_free(result.header, &err);
     }
     return 0;
 }
 
 int test_frame_functions() {
-    uint8_t frame_data[] = {0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                            0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1,
-                            0x03, 0xF0, 'T', 'E', 'S', 'T'};
+    uint8_t frame_data[] = { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
     ax25_frame_t *frame = ax25_frame_decode(frame_data, sizeof(frame_data), 0, &err);
     TEST_ASSERT(frame != NULL, "ax25_frame_decode should return non-NULL", err);
     if (frame) {
         size_t len;
         uint8_t *encoded = ax25_frame_encode(frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
+        if (encoded)
+            free(encoded);
         ax25_frame_free(frame, &err);
     }
     return 0;
 }
 
 int test_raw_frame_functions() {
-    uint8_t frame_data[] = {0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                            0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1,
-                            0x03, 0xF0, 'T', 'E', 'S', 'T'};
-    ax25_raw_frame_t raw_frame = {
-        .payload = frame_data,
-        .payload_len = sizeof(frame_data)
-    };
+    uint8_t frame_data[] = { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
+    ax25_raw_frame_t raw_frame = { .payload = frame_data, .payload_len = sizeof(frame_data) };
     size_t len;
     uint8_t *encoded = ax25_raw_frame_encode(&raw_frame, &len, &err);
     TEST_ASSERT(encoded != NULL, "ax25_raw_frame_encode should return non-NULL", err);
-    if (encoded) free(encoded);
+    if (encoded)
+        free(encoded);
     return 0;
 }
 
 int test_unnumbered_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     ax25_unnumbered_frame_t *u_frame = ax25_unnumbered_frame_decode(header, 0x03, NULL, 0, &err);
     TEST_ASSERT(u_frame != NULL, "ax25_unnumbered_frame_decode should return non-NULL", err);
     if (u_frame) {
         size_t len;
         uint8_t *encoded = ax25_unnumbered_frame_encode(u_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_unnumbered_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)u_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) u_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_unnumbered_information_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     uint8_t info[] = "TEST";
     ax25_unnumbered_information_frame_t *ui_frame = ax25_unnumbered_information_frame_decode(header, true, info, 4, &err);
     TEST_ASSERT(ui_frame != NULL, "ax25_unnumbered_information_frame_decode should return non-NULL", err);
@@ -164,32 +160,34 @@ int test_unnumbered_information_frame_functions() {
         size_t len;
         uint8_t *encoded = ax25_unnumbered_information_frame_encode(ui_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_unnumbered_information_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)ui_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) ui_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_frame_reject_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     ax25_frame_reject_frame_t *frmr_frame = ax25_frame_reject_frame_decode(header, true, NULL, 0, &err);
     TEST_ASSERT(frmr_frame != NULL, "ax25_frame_reject_frame_decode should return non-NULL", err);
     if (frmr_frame) {
         size_t len;
         uint8_t *encoded = ax25_frame_reject_frame_encode(frmr_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_frame_reject_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)frmr_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) frmr_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_information_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     uint8_t info[] = "TEST";
     ax25_information_frame_t *i_frame = ax25_information_frame_decode(header, 0x00, info, 4, false, &err);
     TEST_ASSERT(i_frame != NULL, "ax25_information_frame_decode should return non-NULL", err);
@@ -197,31 +195,33 @@ int test_information_frame_functions() {
         size_t len;
         uint8_t *encoded = ax25_information_frame_encode(i_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_information_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)i_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) i_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_supervisory_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     ax25_supervisory_frame_t *s_frame = ax25_supervisory_frame_decode(header, 0x01, false, &err); // RR
     TEST_ASSERT(s_frame != NULL, "ax25_supervisory_frame_decode should return non-NULL", err);
     if (s_frame) {
         size_t len;
         uint8_t *encoded = ax25_supervisory_frame_encode(s_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_supervisory_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)s_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) s_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_xid_parameter_functions() {
-    uint8_t pv[] = {0x01, 0x02};
+    uint8_t pv[] = { 0x01, 0x02 };
     ax25_xid_parameter_t *param = ax25_xid_raw_parameter_new(1, pv, 2, &err);
     TEST_ASSERT(param != NULL, "ax25_xid_raw_parameter_new should return non-NULL", err);
     if (param) {
@@ -232,28 +232,33 @@ int test_xid_parameter_functions() {
             size_t consumed;
             ax25_xid_parameter_t *decoded = ax25_xid_parameter_decode(encoded, len, &consumed, &err);
             TEST_ASSERT(decoded != NULL, "ax25_xid_parameter_decode should return non-NULL", err);
-            if (decoded) ax25_xid_raw_parameter_free(decoded, &err);
+            if (decoded)
+                ax25_xid_raw_parameter_free(decoded, &err);
             free(encoded);
         }
         ax25_xid_parameter_t *copy = ax25_xid_raw_parameter_copy(param, &err);
         TEST_ASSERT(copy != NULL, "ax25_xid_raw_parameter_copy should return non-NULL", err);
-        if (copy) ax25_xid_raw_parameter_free(copy, &err);
+        if (copy)
+            ax25_xid_raw_parameter_free(copy, &err);
         ax25_xid_raw_parameter_free(param, &err);
     }
 
     param = ax25_xid_class_of_procedures_new(true, false, true, false, true, false, true, false, &err);
     TEST_ASSERT(param != NULL, "ax25_xid_class_of_procedures_new should return non-NULL", err);
-    if (param) ax25_xid_raw_parameter_free(param, &err);
+    if (param)
+        ax25_xid_raw_parameter_free(param, &err);
 
     param = ax25_xid_hdlc_optional_functions_new(true, false, true, false, true, false, true, false, true,
-                                                false, false, false, false, false, false, false, false,
-                                                false, false, false, false, false, false, &err);
+    false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, &err);
     TEST_ASSERT(param != NULL, "ax25_xid_hdlc_optional_functions_new should return non-NULL", err);
-    if (param) ax25_xid_raw_parameter_free(param, &err);
+    if (param)
+        ax25_xid_raw_parameter_free(param, &err);
 
     param = ax25_xid_big_endian_new(1, 0x12345678, 4, &err);
     TEST_ASSERT(param != NULL, "ax25_xid_big_endian_new should return non-NULL", err);
-    if (param) ax25_xid_raw_parameter_free(param, &err);
+    if (param)
+        ax25_xid_raw_parameter_free(param, &err);
 
     ax25_xid_init_defaults(&err); // No return value to check
     printf("\033[0;32m   PASS: ax25_xid_init_defaults executed\033[0m\n");
@@ -261,25 +266,26 @@ int test_xid_parameter_functions() {
 }
 
 int test_exchange_identification_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
-    uint8_t data[] = {0x01, 0x02};
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
+    uint8_t data[] = { 0x01, 0x02 };
     ax25_exchange_identification_frame_t *xid_frame = ax25_exchange_identification_frame_decode(header, true, data, 2, &err);
     TEST_ASSERT(xid_frame != NULL, "ax25_exchange_identification_frame_decode should return non-NULL", err);
     if (xid_frame) {
         size_t len;
         uint8_t *encoded = ax25_exchange_identification_frame_encode(xid_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_exchange_identification_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)xid_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) xid_frame, &err);
     }
     ax25_frame_header_free(header, &err);
     return 0;
 }
 
 int test_test_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]){0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0,
-                                                                       0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1}, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     uint8_t data[] = "TEST";
     ax25_test_frame_t *test_frame = ax25_test_frame_decode(header, true, data, 4, &err);
     TEST_ASSERT(test_frame != NULL, "ax25_test_frame_decode should return non-NULL", err);
@@ -287,10 +293,253 @@ int test_test_frame_functions() {
         size_t len;
         uint8_t *encoded = ax25_test_frame_encode(test_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_test_frame_encode should return non-NULL", err);
-        if (encoded) free(encoded);
-        ax25_frame_free((ax25_frame_t *)test_frame, &err);
+        if (encoded)
+            free(encoded);
+        ax25_frame_free((ax25_frame_t*) test_frame, &err);
     }
     ax25_frame_header_free(header, &err);
+    return 0;
+}
+
+// full test: connect, send, receive, disconnect
+// --- AX.25 Packet Definitions ---
+// These arrays represent the raw hexadecimal bytes of AX.25 frames.
+//
+// Structure of an AX.25 frame (simplified):
+// [Flag] [Address Field] [Control Field] [PID Field] [Information Field] [FCS] [Flag]
+//
+// - Flag: 0x7E (start/end of frame)
+// - Address Field: Destination (7 bytes) + Source (7 bytes) + optional Digipeaters.
+//   Each callsign character is ASCII shifted left by 1 bit.
+//   The 7th byte of each address encodes the SSID (bits 1-4) and control bits.
+//   - Source (VA3AAA-1): 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62
+//     (V A 3 A A A, SSID 1, C/R=0, H=0, S-bit=0 for intermediate, or 1 for last address)
+//   - Destination (VA3BBB-7): 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE
+//     (V A 3 B B B, SSID 7, C/R=1, H=0, S-bit=1 for last address)
+// - Control Field: Defines the frame type and sequence numbers.
+//   - SABM (Set Asynchronous Balanced Mode): 0x3F (connect request)
+//   - UA (Unnumbered Acknowledgment): 0x73 (acknowledges SABM/DISC)
+//   - I-Frame (Information Frame): 0x00 (N(S)=0, N(R)=0 - for first data packet)
+//   - RR (Receive Ready): 0x01 (N(R)=1 - acknowledges I-frame, ready for next)
+//   - DISC (Disconnect): 0x43 (disconnect request)
+// - PID Field: Protocol Identifier. 0xF0 indicates No Layer 3 Protocol.
+// - Information Field: The actual data payload (only for I-frames).
+// - FCS (Frame Check Sequence): 2 bytes for error detection (CRC-16-CCITT).
+//   Placeholder values (0x00, 0x00) are used here. In a real system, this is calculated.
+
+// 1. CONNECT Request (Station A -> Station B: SABM)
+// Purpose: Initiate a connected-mode session.
+// Control: 0x3F (SABM, Poll bit set)
+unsigned char ax25_sabm_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE,
+        // Source Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0x3F, // Control Field: SABM (Set Asynchronous Balanced Mode)
+        0xF0, // PID Field: No Layer 3 Protocol
+        0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_sabm_packet_len = sizeof(ax25_sabm_packet);
+
+// 2. CONNECT Acknowledgment (Station B -> Station A: UA)
+// Purpose: Acknowledge the connection request.
+// Control: 0x73 (UA, Final bit set)
+unsigned char ax25_ua_connect_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62,
+        // Source Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0x73, // Control Field: UA (Unnumbered Acknowledgment)
+        0xF0, // PID Field: No Layer 3 Protocol
+        0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_ua_connect_packet_len = sizeof(ax25_ua_connect_packet);
+
+// 3. SEND Data (Station A -> Station B: I-Frame)
+// Purpose: Transmit information.
+// Control: 0x00 (I-Frame, N(S)=0, N(R)=0)
+// Information: "Hello, World!" (ASCII)
+unsigned char ax25_i_frame_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE,
+        // Source Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0x00, // Control Field: I-Frame (N(S)=0, N(R)=0)
+        0xF0, // PID Field: No Layer 3 Protocol
+        // Information Field: "Hello, World!" (ASCII Hex)
+        0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_i_frame_packet_len = sizeof(ax25_i_frame_packet);
+
+// 4. RECEIVE Data Acknowledgment (Station B -> Station A: RR)
+// Purpose: Acknowledge receipt of the I-Frame and indicate readiness for the next.
+// Control: 0x01 (RR, N(R)=1)
+unsigned char ax25_rr_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62,
+        // Source Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0x01, // Control Field: RR (Receive Ready, N(R)=1)
+        0xF0, // PID Field: No Layer 3 Protocol
+        0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_rr_packet_len = sizeof(ax25_rr_packet);
+
+// 5. DISCONNECT Request (Station A -> Station B: DISC)
+// Purpose: Terminate the connected-mode session.
+// Control: 0x43 (DISC, Poll bit set)
+unsigned char ax25_disc_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE,
+        // Source Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0x43, // Control Field: DISC (Disconnect)
+        0xF0, // PID Field: No Layer 3 Protocol
+        0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_disc_packet_len = sizeof(ax25_disc_packet);
+
+// 6. DISCONNECT Acknowledgment (Station B -> Station A: UA)
+// Purpose: Acknowledge the disconnect request.
+// Control: 0x73 (UA, Final bit set)
+unsigned char ax25_ua_disconnect_packet[] = { 0x7E, // Flag
+        // Destination Address (VA3AAA-1)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62,
+        // Source Address (VA3BBB-7)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0x73, // Control Field: UA (Unnumbered Acknowledgment)
+        0xF0, // PID Field: No Layer 3 Protocol
+        0x00, 0x00, // FCS (Placeholder)
+        0x7E  // Flag
+        };
+size_t ax25_ua_disconnect_packet_len = sizeof(ax25_ua_disconnect_packet);
+
+// Helper function to print a packet in hexadecimal format
+void print_packet(const char *name, const unsigned char *packet, size_t len) {
+    printf("--- %s (Length: %zu bytes) ---\n", name, len);
+    for (size_t i = 0; i < len; i++) {
+        printf("%02X ", packet[i]);
+        if ((i + 1) % 16 == 0) { // Newline every 16 bytes for readability
+            printf("\n");
+        }
+    }
+    printf("\n\n");
+}
+
+int test_ax25_connection(void) {
+    unsigned char invalid_packet[] = { //
+            0x7E, // Flag
+            0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, // Dest: VA3BBB-7
+            0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, // Src: VA3AAA-1
+            0xFF, // Invalid control
+            0x00, 0x00, // FCS
+            0x7E // Flag
+            };
+
+    size_t ax25_sabm_packet_len = sizeof(ax25_sabm_packet);
+    size_t ax25_ua_connect_packet_len = sizeof(ax25_ua_connect_packet);
+    size_t ax25_i_frame_packet_len = sizeof(ax25_i_frame_packet);
+    size_t ax25_rr_packet_len = sizeof(ax25_rr_packet);
+    size_t ax25_disc_packet_len = sizeof(ax25_disc_packet);
+    size_t ax25_ua_disconnect_packet_len = sizeof(ax25_ua_disconnect_packet);
+    size_t invalid_packet_len = sizeof(invalid_packet);
+
+    unsigned char short_packet[] = { 0x7E, 0xAC, 0x82, 0x66 };
+    size_t short_packet_len = sizeof(short_packet);
+
+    // Initialize addresses
+    uint8_t addr_err;
+    ax25_address_t *station_a = ax25_address_from_string("VA3AAA-1", &addr_err);
+    TEST_ASSERT(station_a != NULL && addr_err == 0, "Create VA3AAA-1 address", addr_err);
+    ax25_address_t *station_b = ax25_address_from_string("VA3BBB-7", &addr_err);
+    TEST_ASSERT(station_b != NULL && addr_err == 0, "Create VA3BBB-7 address", addr_err);
+
+    // Buffer for encoded frames
+    size_t encoded_len;
+    ax25_frame_t *decoded_frame;
+    uint8_t frame_err;
+    uint8_t *encode_result;
+
+    // Helper macro to compare encoded frame with expected packet (excluding flags and FCS)
+#define COMPARE_FRAME(encoded, encoded_len, expected, expected_len, msg) \
+        do { \
+            size_t min_len = (encoded_len < expected_len) ? encoded_len : expected_len; \
+            int cmp = memcmp(encoded + 1, expected + 1, min_len - 4); \
+            TEST_ASSERT(cmp == 0 && encoded_len == expected_len, msg, cmp); \
+        } while (0)
+
+    // 1. Test SABM frame
+    decoded_frame = ax25_frame_decode(ax25_sabm_packet, ax25_sabm_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding SABM frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding SABM frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_sabm_packet, ax25_sabm_packet_len, "SABM frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing SABM frame", frame_err);
+
+    // 2. Test UA connect frame
+    decoded_frame = ax25_frame_decode(ax25_ua_connect_packet, ax25_ua_connect_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding UA connect frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding UA connect frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_ua_connect_packet, ax25_ua_connect_packet_len, "UA connect frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing UA connect frame", frame_err);
+
+    // 3. Test I-Frame
+    decoded_frame = ax25_frame_decode(ax25_i_frame_packet, ax25_i_frame_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding I-Frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding I-Frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_i_frame_packet, ax25_i_frame_packet_len, "I-Frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing I-Frame", frame_err);
+
+    // 4. Test RR frame
+    decoded_frame = ax25_frame_decode(ax25_rr_packet, ax25_rr_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding RR frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding RR frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_rr_packet, ax25_rr_packet_len, "RR frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing RR frame", frame_err);
+
+    // 5. Test DISC frame
+    decoded_frame = ax25_frame_decode(ax25_disc_packet, ax25_disc_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding DISC frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding DISC frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_disc_packet, ax25_disc_packet_len, "DISC frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing DISC frame", frame_err);
+
+    // 6. Test UA disconnect frame
+    decoded_frame = ax25_frame_decode(ax25_ua_disconnect_packet, ax25_ua_disconnect_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame != NULL && frame_err == 0, "Decoding UA disconnect frame", frame_err);
+    encode_result = ax25_frame_encode(decoded_frame, &encoded_len, &frame_err);
+    TEST_ASSERT(encode_result != NULL && frame_err == 0, "Encoding UA disconnect frame", frame_err);
+    COMPARE_FRAME(encode_result, encoded_len, ax25_ua_disconnect_packet, ax25_ua_disconnect_packet_len, "UA disconnect frame content");
+    ax25_frame_free(decoded_frame, &frame_err);
+    TEST_ASSERT(frame_err == 0, "Freeing UA disconnect frame", frame_err);
+
+    // 7. Error Case: Invalid control byte
+    decoded_frame = ax25_frame_decode(invalid_packet, invalid_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame == NULL && frame_err != 0, "Decoding invalid control frame should fail", frame_err);
+
+    // 8. Error Case: Short frame
+    decoded_frame = ax25_frame_decode(short_packet, short_packet_len, 0, &frame_err);
+    TEST_ASSERT(decoded_frame == NULL && frame_err != 0, "Decoding short frame should fail", frame_err);
+
+    // 9. Error Case: Null input
+    decoded_frame = ax25_frame_decode(NULL, 0, 0, &frame_err);
+    TEST_ASSERT(decoded_frame == NULL && frame_err != 0, "Decoding null input should fail", frame_err);
+
+    // Clean up addresses
+    ax25_address_free(station_a, &addr_err);
+    TEST_ASSERT(addr_err == 0, "Freeing VA3AAA-1 address", addr_err);
+    ax25_address_free(station_b, &addr_err);
+    TEST_ASSERT(addr_err == 0, "Freeing VA3BBB-7 address", addr_err);
+
+    printf("\033[0;32mAll tests passed successfully!\033[0m\n");
     return 0;
 }
 
@@ -310,6 +559,16 @@ int main() {
     result |= test_xid_parameter_functions();
     result |= test_exchange_identification_frame_functions();
     result |= test_test_frame_functions();
-    printf("\nTests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
+
+    printf("\nSimulated AX.25 Connected-Mode Communication Packets:\n\n");
+    print_packet("1. CONNECT Request (A -> B: SABM)", ax25_sabm_packet, ax25_sabm_packet_len);
+    print_packet("2. CONNECT Acknowledgment (B -> A: UA)", ax25_ua_connect_packet, ax25_ua_connect_packet_len);
+    print_packet("3. SEND Data (A -> B: I-Frame)", ax25_i_frame_packet, ax25_i_frame_packet_len);
+    print_packet("4. RECEIVE Data Acknowledgment (B -> A: RR)", ax25_rr_packet, ax25_rr_packet_len);
+    print_packet("5. DISCONNECT Request (A -> B: DISC)", ax25_disc_packet, ax25_disc_packet_len);
+    print_packet("6. DISCONNECT Acknowledgment (B -> A: UA)", ax25_ua_disconnect_packet, ax25_ua_disconnect_packet_len);
+    result |= test_ax25_connection();
+
+    printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
     return result;
 }
