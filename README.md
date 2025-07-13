@@ -1,1 +1,5 @@
 # ax25
+
+WORK IN PROGRESS!!!
+
+STILL NOT WORK
