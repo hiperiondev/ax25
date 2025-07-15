@@ -64,6 +64,10 @@ int test_address_functions() {
     if (addr) {
         TEST_ASSERT(strcmp(addr->callsign, "NOCALL") == 0, "Callsign should be NOCALL", err);
         TEST_ASSERT(addr->ssid == 0, "SSID should be 0", err);
+        TEST_ASSERT(addr->ch == false, "ch should be false", err);
+        TEST_ASSERT(addr->res0 == true, "res0 should be true", err);
+        TEST_ASSERT(addr->res1 == true, "res1 should be true", err);
+        TEST_ASSERT(addr->extension == false, "extension should be false", err);
     }
 
     // Test ax25_address_encode
@@ -91,6 +95,7 @@ int test_address_functions() {
 
     // Clean up
     ax25_address_free(addr_copy, &err);
+    ax25_address_free(addr, &err);
     return 0;
 }
 
@@ -316,12 +321,14 @@ int test_xid_parameter_functions() {
         ax25_xid_raw_parameter_free(param, &err);
 
     ax25_xid_init_defaults(&err); // No return value to check
+    ax25_xid_deinit_defaults(&err);
     printf("\033[0;32m   PASS: ax25_xid_init_defaults executed\033[0m\n");
     return 0;
 }
 
 int test_exchange_identification_frame_functions() {
-    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[]) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 }, 14, &err).header;
+    ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
+            14, &err).header;
     TEST_ASSERT(header != NULL, "ax25_frame_header_decode should return non-NULL", err);
     if (header == NULL)
         return 1;
@@ -338,8 +345,9 @@ int test_exchange_identification_frame_functions() {
         TEST_ASSERT(xid_frame->param_count == 1, "Should have 1 parameter", err);
         if (xid_frame->param_count > 0) {
             TEST_ASSERT(xid_frame->parameters[0]->pi == 0x01, "Parameter Identifier should be 0x01", err);
-            uint8_t *pv = (uint8_t*)xid_frame->parameters[0]->data;
-            size_t pv_len = pv ? *(size_t*)(pv + 2) : 0;
+            ax25_raw_param_data_t *param_data = (ax25_raw_param_data_t*) xid_frame->parameters[0]->data;
+            size_t pv_len = param_data ? param_data->pv_len : 0;
+            uint8_t *pv = param_data ? param_data->pv : NULL;
             TEST_ASSERT(pv_len == 2, "Parameter value length should be 2", err);
             TEST_ASSERT(pv[0] == 0x41 && pv[1] == 0x00, "Parameter value should match {0x41, 0x00}", err);
         }
@@ -348,20 +356,12 @@ int test_exchange_identification_frame_functions() {
         uint8_t *encoded = ax25_exchange_identification_frame_encode(xid_frame, &len, &err);
         TEST_ASSERT(encoded != NULL, "ax25_exchange_identification_frame_encode should return non-NULL", err);
         if (encoded) {
-            // Try expected with control byte 0xBF (with poll/final)
-            uint8_t expected_with_pf[] = { 0xBF, 0x82, 0x80, 0x00, 0x04, 0x01, 0x02, 0x41, 0x00 };
-            size_t expected_len = sizeof(expected_with_pf);
-            int pf_cmp = memcmp(encoded, expected_with_pf, (len < expected_len) ? len : expected_len);
-            if (pf_cmp == 0 && len == expected_len) {
-                printf("\033[0;32m   PASS: Encoded XID frame content matches with poll/final (0xBF)\033[0m\n");
-            } else {
-                // Try expected with control byte 0xAF (without poll/final)
-                uint8_t expected_no_pf[] = { 0xAF, 0x82, 0x80, 0x00, 0x04, 0x01, 0x02, 0x41, 0x00 };
-                COMPARE_FRAME(encoded, len, expected_no_pf, expected_len, "Encoded XID frame content should match (trying 0xAF)");
-            }
+            uint8_t expected[] = { 0xBF, 0x82, 0x80, 0x00, 0x04, 0x01, 0x02, 0x41, 0x00 };
+            size_t expected_len = sizeof(expected);
+            COMPARE_FRAME(encoded, len, expected, expected_len, "Encoded XID frame content should match");
             free(encoded);
         }
-        ax25_frame_free((ax25_frame_t*)xid_frame, &err);
+        ax25_frame_free((ax25_frame_t*) xid_frame, &err);
         TEST_ASSERT(err == 0, "Freeing XID frame", err);
     }
     ax25_frame_header_free(header, &err);
@@ -396,7 +396,7 @@ int test_test_frame_functions() {
 // Purpose: Initiate a connected-mode session.
 // Control: 0x3F (SABM, Poll bit set)
 unsigned char ax25_sabm_packet[] = {
-        // Destination Address (VA3BBB-7)
+// Destination Address (VA3BBB-7)
         0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, // C-bit=1, extension=0
         // Source Address (VA3AAA-1)
         0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, // C-bit=0, extension=1
@@ -408,7 +408,7 @@ size_t ax25_sabm_packet_len = sizeof(ax25_sabm_packet);
 // Purpose: Acknowledge the connection request.
 // Control: 0x73 (UA, Final bit set)
 unsigned char ax25_ua_connect_packet[] = {
-        // Destination Address (VA3AAA-1)
+// Destination Address (VA3AAA-1)
         0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, // C-bit=0, extension=0
         // Source Address (VA3BBB-7)
         0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, // C-bit=1, extension=1
@@ -421,26 +421,23 @@ size_t ax25_ua_connect_packet_len = sizeof(ax25_ua_connect_packet);
 // Control: 0x00 (I-Frame, N(S)=0, N(R)=0)
 // Information: "Hello, World!" (ASCII)
 unsigned char ax25_i_frame_packet[] = {
-        // Destination Address (VA3BBB-7)
+// Destination Address (VA3BBB-7)
         0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE,
         // Source Address (VA3AAA-1)
-        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63,
-        0x00, // Control Field: I-Frame (N(S)=0, N(R)=0)
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, // Control Field: I-Frame (N(S)=0, N(R)=0)
         0xF0, // PID Field: No Layer 3 Protocol
         // Information Field: "Hello, World!" (ASCII Hex)
-        0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21
-        };
+        0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21 };
 size_t ax25_i_frame_packet_len = sizeof(ax25_i_frame_packet);
 
 // 4. RECEIVE Data Acknowledgment (Station B -> Station A: RR)
 // Purpose: Acknowledge receipt of the I-Frame and indicate readiness for the next.
 // Control: 0x01 (RR, N(R)=1)
 unsigned char ax25_rr_packet[] = {
-        // Destination Address (VA3AAA-1)
+// Destination Address (VA3AAA-1)
         0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62,
         // Source Address (VA3BBB-7)
-        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF,
-        0x01 // Control Field: RR (Receive Ready, N(R)=1)
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x01 // Control Field: RR (Receive Ready, N(R)=1)
         };
 size_t ax25_rr_packet_len = sizeof(ax25_rr_packet);
 
@@ -448,11 +445,10 @@ size_t ax25_rr_packet_len = sizeof(ax25_rr_packet);
 // Purpose: Terminate the connected-mode session.
 // Control: 0x43 (DISC, Poll bit set)
 unsigned char ax25_disc_packet[] = {
-        // Destination Address (VA3BBB-7)
+// Destination Address (VA3BBB-7)
         0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE,
         // Source Address (VA3AAA-1)
-        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63,
-        0x43 // Control Field: DISC with P=1
+        0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x43 // Control Field: DISC with P=1
         };
 size_t ax25_disc_packet_len = sizeof(ax25_disc_packet);
 
@@ -460,32 +456,32 @@ size_t ax25_disc_packet_len = sizeof(ax25_disc_packet);
 // Purpose: Acknowledge the disconnect request.
 // Control: 0x73 (UA, Final bit set)
 unsigned char ax25_ua_disconnect_packet[] = {
-        // Destination Address (VA3AAA-1)
+// Destination Address (VA3AAA-1)
         0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62,
         // Source Address (VA3BBB-7)
-        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF,
-        0x73 // Control Field: UA with F=1
+        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x73 // Control Field: UA with F=1
         };
 size_t ax25_ua_disconnect_packet_len = sizeof(ax25_ua_disconnect_packet);
 
-unsigned char invalid_packet[] = {
-        0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, // Dest: VA3BBB-7
+unsigned char invalid_packet[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, // Dest: VA3BBB-7
         0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, // Src: VA3AAA-1
         0xFF // Invalid control
         };
 size_t invalid_packet_len = sizeof(invalid_packet);
 
-// Helper function to print a packet in hexadecimal format
-void print_packet(const char *name, const unsigned char *packet, size_t len) {
-    printf("--- %s (Length: %zu bytes) ---\n", name, len);
-    for (size_t i = 0; i < len; i++) {
-        printf("%02X ", packet[i]);
-        if ((i + 1) % 16 == 0) { // Newline every 16 bytes for readability
-            printf("\n");
-        }
-    }
-    printf("\n\n");
-}
+/*
+ // Helper function to print a packet in hexadecimal format
+ void print_packet(const char *name, const unsigned char *packet, size_t len) {
+ printf("--- %s (Length: %zu bytes) ---\n", name, len);
+ for (size_t i = 0; i < len; i++) {
+ printf("%02X ", packet[i]);
+ if ((i + 1) % 16 == 0) { // Newline every 16 bytes for readability
+ printf("\n");
+ }
+ }
+ printf("\n\n");
+ }
+ */
 
 int test_ax25_connection(void) {
     unsigned char short_packet[] = { 0xAC, 0x82, 0x66 };
@@ -602,13 +598,15 @@ int main() {
     result |= test_exchange_identification_frame_functions();
     result |= test_test_frame_functions();
 
-    printf("\nSimulated AX.25 Connected-Mode Communication Packets:\n\n");
-    print_packet("1. CONNECT Request (A -> B: SABM)", ax25_sabm_packet, ax25_sabm_packet_len);
-    print_packet("2. CONNECT Acknowledgment (B -> A: UA)", ax25_ua_connect_packet, ax25_ua_connect_packet_len);
-    print_packet("3. SEND Data (A -> B: I-Frame)", ax25_i_frame_packet, ax25_i_frame_packet_len);
-    print_packet("4. RECEIVE Data Acknowledgment (B -> A: RR)", ax25_rr_packet, ax25_rr_packet_len);
-    print_packet("5. DISCONNECT Request (A -> B: DISC)", ax25_disc_packet, ax25_disc_packet_len);
-    print_packet("6. DISCONNECT Acknowledgment (B -> A: UA)", ax25_ua_disconnect_packet, ax25_ua_disconnect_packet_len);
+    /*
+     printf("\nSimulated AX.25 Connected-Mode Communication Packets:\n\n");
+     print_packet("1. CONNECT Request (A -> B: SABM)", ax25_sabm_packet, ax25_sabm_packet_len);
+     print_packet("2. CONNECT Acknowledgment (B -> A: UA)", ax25_ua_connect_packet, ax25_ua_connect_packet_len);
+     print_packet("3. SEND Data (A -> B: I-Frame)", ax25_i_frame_packet, ax25_i_frame_packet_len);
+     print_packet("4. RECEIVE Data Acknowledgment (B -> A: RR)", ax25_rr_packet, ax25_rr_packet_len);
+     print_packet("5. DISCONNECT Request (A -> B: DISC)", ax25_disc_packet, ax25_disc_packet_len);
+     print_packet("6. DISCONNECT Acknowledgment (B -> A: UA)", ax25_ua_disconnect_packet, ax25_ua_disconnect_packet_len);
+     */
     result |= test_ax25_connection();
 
     printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");

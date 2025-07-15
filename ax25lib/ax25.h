@@ -24,6 +24,119 @@
  *
  */
 
+/*
+ * https://www.tapr.org/pub_ax25.html
+ * https://www.tapr.org/pdf/AX25.2.2.pdf
+ *
+ *
+ * +----------+----------------+---------+--------+----------+---------+----------+
+ * | Flag     | Address        | Control | (PID)  | (Data)   |  FCS    | Flag     |
+ * +----------+----------------+---------+--------+----------+---------+----------+
+ * | 01111110 | 112 - 560 bits | 8 bits  | 8 bits | n*8 bits | 16 bits | 01111110 |
+ * +----------+----------------+---------+--------+----------+---------+----------+
+ *                    |          |         |
+ *                    |          |         |  +------+------------------+
+ *                    |          |         |  | PID  | Layer 3 protocol |
+ *                    |          |         |  +------+------------------+-------------------------------------------------------+
+ *                    |          |         \- | 0x01 | ISO 8208/CCITT X.25 PLP                                                  |
+ *                    |          |            | 0x06 | Compressed TCP/IP packet. Van Jacobson (RFC 1144)                        |
+ *                    |          |            | 0x07 | Uncompressed TCP/IP packet. Van Jacobson (RFC 1144)                      |
+ *                    |          |            | 0x08 | Segmentation fragment                                                    |
+ *                    |          |            | **** | AX.25 layer 3 implemented (xx01xxxx)                                     |
+ *                    |          |            | **** | AX.25 layer 3 implemented (xx10xxxx)                                     |
+ *                    |          |            | 0xC3 | TEXNET datagram protocol                                                 |
+ *                    |          |            | 0xC4 | Link Quality Protocol                                                    |
+ *                    |          |            | 0xCA | Appletalk                                                                |
+ *                    |          |            | 0xCB | Appletalk ARP                                                            |
+ *                    |          |            | 0xCC | ARPA Internet Protocol                                                   |
+ *                    |          |            | 0xCD | ARPA Address resolution                                                  |
+ *                    |          |            | 0xCE | FlexNet                                                                  |
+ *                    |          |            | 0xCF | NET/ROM                                                                  |
+ *                    |          |            | 0xF0 | No layer 3 protocol implemented                                          |
+ *                    |          |            | 0xFF | Escape character. Next octet contains more Level 3 protocol information. |
+ *                    |          |            +------+--------------------------------------------------------------------------+
+ *                    |          |
+ *                    |          |       ==========================================================================================
+ *                    |          |
+ *                    |          |         /-
+ *                    |          \--------|
+ *                    |                   |  +---------------+--------------------+
+ *                    |                   |  | Frame type    | Bit number (7 MSB) |
+ *                    |                   |  |               +---+---+---+---+---++--+---+---+
+ *                    |                   |  |               | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+ *                    |                   |  +---------------+---+---+---+---+---+---+---+---+
+ *                    |                   |  | I(nformation) |    RSN    | P |    SSN    | 0 |
+ *                    |                   |  +---------------+---+---+---+---+---+---+---+---+
+ *                    |                   |  | S(upervisory) |    RSN    | G |   S   | 0 | 1 |
+ *                    |                   |  +---------------+---+---+---+---+---+---+---+---+
+ *                    |                   |  | U(nnumbered)  | M | M | M | G | M | M | 1 | 1 |
+ *                    |                   |  +---------------+---+---+---+---+---+---+---+---+
+ *                    |                   |
+ *                    |                   |  P: Poll bit (command)
+ *                    |                   |  F: Final bit (command response)
+ *                    |                   |  G: Either poll or final
+ *                    |                   |  RSN: Receive sequence number
+ *                    |                   |  SSN: Send sequence number
+ *                    |                   |
+ *                    |                   |  S: +-------------------+----+
+ *                    |                   |     | Receive ready     | 00 |
+ *                    |                   |     | Receive not ready | 01 |
+ *                    |                   |     | Reject            | 10 |
+ *                    |                   |     +-------------------+----+
+ *                    |                   |
+ *                    |                   |  M: +--------------------------------+--------+
+ *                    |                   |     | Set asynchronous balanced mode | 001P11 |
+ *                    |                   |     | Disconnect                     | 010P00 |
+ *                    |                   |     | Disconnected mode              | 000F11 |
+ *                    |                   |     | Unnumbered acknowledge         | 011F00 |
+ *                    |                   |     | Frame reject                   | 100F01 |
+ *                    |                   |     | Unnumbered information         | 000G00 |
+ *                    |                   |     +--------------------------------+--------+
+ *                    |                   |
+ *                    |                    \-
+ *                    |
+ *                    |           ==================================================================================================
+ *                    |
+ *                    |          /-
+ *                    \---------|
+ *                              |  +-----------------------------------------+-----------------------------------------+----------...
+ *                              |  | Destination address                     | Source address                          | Repeaters...
+ *                              |  +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+----------...
+ *                              |  | A1  | A2  | A3  | A4  | A5  | A6  | A7  | A8  | A9  | A10 | A11 | A12 | A13 | A14 |...
+ *                              |  +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+----------...
+ *                              |
+ *                              |  Up to a total of 10 address fields, of which 8 are special optional repeater addresses
+ *                              |
+ *                              |  +-----------------+--------------------+
+ *                              |  | Address byte    | Bit number (7 MSB) |
+ *                              |  |                 +---+---+---+---+---++--+---+---+
+ *                              |  |        An       | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+ *                              |  +-----------------+---+---+---+---+---+---+---+---+
+ *                              |  | A7 & A14 (SSID) | C | R | R |     SSID      | H |
+ *                              |  +-----------------+---+---+---+---+---+---+---+---+
+ *                              |  | Other (Data)    |             D             | H |
+ *                              |  +-----------------+---+---+---+---+---+---+---+---+
+ *                              |
+ *                              |
+ *                              |  C: A7/A14:
+ *                              |                +----------------+-----------------+
+ *                              |                | Dest. SSID bit | Source SSID bit |
+ *                              |     +----------+----------------+-----------------+
+ *                              |     | Command  |        1       |        0        |
+ *                              |     | Response |        0       |        1        |
+ *                              |     +----------+----------------+-----------------+
+ *                              |
+ *                              |    other ssids:
+ *                                    has-been-repeated bit, set when sent through repeater
+ *                              |
+ *                              |  R: Reserved bit, should be 1
+ *                              |  H: HDLC extension bit. When 0, next byte is another address bytes, when 1 end
+ *                              |     of address field
+ *                              |  D: Data. For call signs, ASCII left-shifted by one
+ *                              |
+ *                              \-
+ */
+
 #ifndef AX25_H_
 #define AX25_H_
 
@@ -183,6 +296,11 @@ typedef struct {
     uint8_t *payload;
     size_t payload_len;
 } ax25_test_frame_t;
+
+typedef struct {
+    size_t pv_len;
+    uint8_t pv[];
+} ax25_raw_param_data_t;
 
 /**
  * @brief Structure to hold the result of decoding an AX.25 frame header.
@@ -428,7 +546,8 @@ uint8_t* ax25_unnumbered_frame_encode(const ax25_unnumbered_frame_t *frame, size
  * @return AX25UnnumberedInformationFrame* Pointer to the decoded UI frame, or NULL if
  *                                         decoding fails or memory allocation fails.
  */
-ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
+ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len,
+        uint8_t *err);
 
 /**
  * @brief Encodes an AX25UnnumberedInformationFrame into a binary array.
@@ -489,7 +608,8 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
  * @return ax25_information_frame_t* Pointer to the decoded I frame, or NULL if decoding fails
  *                               or memory allocation fails.
  */
-ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit, uint8_t *err);
+ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *header, uint16_t control, const uint8_t *data, size_t len, bool is_16bit,
+        uint8_t *err);
 
 /**
  * @brief Encodes an AX25InformationFrame into a binary array.
@@ -614,7 +734,8 @@ ax25_xid_parameter_t* ax25_xid_parameter_decode(const uint8_t *data, size_t len,
  * @return AX25ExchangeIdentificationFrame* Pointer to the decoded XID frame, or NULL if
  *                                          decoding fails or memory allocation fails.
  */
-ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err);
+ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len,
+        uint8_t *err);
 
 /**
  * @brief Encodes an AX25ExchangeIdentificationFrame into a binary array.
@@ -709,9 +830,9 @@ ax25_xid_parameter_t* ax25_xid_class_of_procedures_new(bool a_flag, bool b_flag,
  * @return AX25XIDParameter* Pointer to the new XID parameter, or NULL if memory allocation fails.
  */
 ax25_xid_parameter_t* ax25_xid_hdlc_optional_functions_new( bool rnr, bool rej, bool srej, bool sabm, bool sabme, bool dm, bool disc, bool ua, bool frmr,
-        bool ui,
-        bool xid, bool test, bool modulo8, bool modulo128, bool res1, bool res2, bool res3, bool res4, bool res5, bool res6, bool res7, uint8_t reserved,
-        bool ext, uint8_t *err);
+bool ui,
+bool xid, bool test, bool modulo8, bool modulo128, bool res1, bool res2, bool res3, bool res4, bool res5, bool res6, bool res7, uint8_t reserved,
+bool ext, uint8_t *err);
 
 /**
  * @brief Creates an XID parameter with a big-endian integer value.
@@ -734,5 +855,7 @@ ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t len
  * It should be called once during program initialization.
  */
 void ax25_xid_init_defaults(uint8_t *err);
+
+void ax25_xid_deinit_defaults(uint8_t *err);
 
 #endif /* AX25_H_ */

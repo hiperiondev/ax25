@@ -107,28 +107,64 @@ ax25_address_t* ax25_address_decode(const uint8_t *data, uint8_t *err) {
 ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err) {
     *err = 0;
     ax25_address_t *addr = malloc(sizeof(ax25_address_t));
-
     if (!addr) {
         *err = 1;
         return NULL;
     }
-
-    char callsign[CALLSIGN_MAX];
+    char callsign[7];
     int ssid = 0;
     bool ch = false;
-
-    sscanf(str, "%6[^-]%d%*[*]", callsign, &ssid);
-    if (strchr(str, '*'))
-        ch = true;
-
-    strncpy(addr->callsign, callsign, CALLSIGN_MAX - 1);
-    addr->callsign[CALLSIGN_MAX - 1] = '\0';
+    const char *dash = strchr(str, '-');
+    if (dash) {
+        size_t len = dash - str;
+        if (len > 6)
+            len = 6;
+        strncpy(callsign, str, len);
+        callsign[len] = '\0';
+        const char *ssid_str = dash + 1;
+        char *endptr;
+        ssid = strtol(ssid_str, &endptr, 10);
+        if (endptr == ssid_str || ssid < 0 || ssid > 15) {
+            *err = 4; // Invalid SSID
+            free(addr);
+            return NULL;
+        }
+        if (*endptr == '*') {
+            ch = true;
+            endptr++;
+        }
+        if (*endptr != '\0') {
+            *err = 5; // Invalid character after SSID
+            free(addr);
+            return NULL;
+        }
+    } else {
+        size_t len = strlen(str);
+        const char *star = strchr(str, '*');
+        if (star) {
+            if (star != str + len - 1) {
+                *err = 6; // '*' not at the end
+                free(addr);
+                return NULL;
+            }
+            len = star - str;
+            ch = true;
+        } else {
+            len = strcspn(str, " \t\n"); // Trim whitespace if needed
+        }
+        if (len > 6)
+            len = 6;
+        strncpy(callsign, str, len);
+        callsign[len] = '\0';
+        ssid = 0;
+    }
+    strncpy(addr->callsign, callsign, 6);
+    addr->callsign[6] = '\0';
     addr->ssid = ssid & 0x0F;
     addr->ch = ch;
     addr->res0 = true;
     addr->res1 = true;
     addr->extension = false;
-
     return addr;
 }
 
@@ -526,7 +562,7 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
         case 0x43: // DISC
         case 0x0F: // DM
         case 0x63: // UA
-            break;
+        break;
         default:
             *err = 5;
             return NULL;
@@ -538,11 +574,8 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
         *err = 6;
         return NULL;
     }
-    frame->base.type = (modifier == 0x2F) ? AX25_FRAME_UNNUMBERED_SABM :
-                       (modifier == 0x6F) ? AX25_FRAME_UNNUMBERED_SABME :
-                       (modifier == 0x43) ? AX25_FRAME_UNNUMBERED_DISC :
-                       (modifier == 0x0F) ? AX25_FRAME_UNNUMBERED_DM :
-                       AX25_FRAME_UNNUMBERED_UA;
+    frame->base.type = (modifier == 0x2F) ? AX25_FRAME_UNNUMBERED_SABM : (modifier == 0x6F) ? AX25_FRAME_UNNUMBERED_SABME :
+                       (modifier == 0x43) ? AX25_FRAME_UNNUMBERED_DISC : (modifier == 0x0F) ? AX25_FRAME_UNNUMBERED_DM : AX25_FRAME_UNNUMBERED_UA;
     frame->base.header = *header;
     frame->base.timestamp = current_time();
     frame->base.deadline = 0.0;
@@ -827,66 +860,57 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size
         *err = 2;
         return NULL;
     }
-
-    uint8_t *pv_copy = pv ? malloc(pv_len + sizeof(size_t)) : NULL;
-    if (pv && !pv_copy) {
-        *err = 3;
-        free(param);
-        return NULL;
-    }
-
+    ax25_raw_param_data_t *data = NULL;
     if (pv) {
-        memcpy(pv_copy, pv, pv_len);
-        *(size_t*) (pv_copy + pv_len) = pv_len;  // pv_len after pv
+        data = malloc(sizeof(ax25_raw_param_data_t) + pv_len);
+        if (!data) {
+            *err = 3;
+            free(param);
+            return NULL;
+        }
+        data->pv_len = pv_len;
+        memcpy(data->pv, pv, pv_len);
     }
-
     param->pi = pi;
     param->encode = ax25_xid_raw_parameter_encode;
     param->copy = ax25_xid_raw_parameter_copy;
     param->free = ax25_xid_raw_parameter_free;
-    param->data = pv_copy;
-
+    param->data = data;
     return param;
 }
 
 uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t *len, uint8_t *err) {
     *err = 0;
-    uint8_t *data = (uint8_t*) param->data;
-
-    size_t pv_len = data ? *(size_t*) (data + 2) : 0;
-    uint8_t *pv = data;
-
+    ax25_raw_param_data_t *data = (ax25_raw_param_data_t*) param->data;
+    size_t pv_len = data ? data->pv_len : 0;
+    uint8_t *pv = data ? data->pv : NULL;
     *len = 2 + pv_len;
     uint8_t *bytes = malloc(*len);
     if (!bytes) {
         *err = 1;
         return NULL;
     }
-
     bytes[0] = param->pi;
     bytes[1] = (uint8_t) pv_len;
     if (pv_len)
         memcpy(bytes + 2, pv, pv_len);
-
     return bytes;
 }
 
 ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *param, uint8_t *err) {
     *err = 0;
-    uint8_t *data = (uint8_t*) param->data;
-    size_t pv_len = data ? *(size_t*) (data + 2) : 0;
-    uint8_t *pv = data;
+    ax25_raw_param_data_t *data = (ax25_raw_param_data_t*) param->data;
+    size_t pv_len = data ? data->pv_len : 0;
+    uint8_t *pv = data ? data->pv : NULL;
     return ax25_xid_raw_parameter_new(param->pi, pv, pv_len, err);
 }
 
 void ax25_xid_raw_parameter_free(ax25_xid_parameter_t *param, uint8_t *err) {
     *err = 0;
-
     if (!param) {
         *err = 1;
         return;
     }
-
     free(param->data);
     free(param);
 }
@@ -1133,7 +1157,6 @@ ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t len
 }
 
 void ax25_xid_init_defaults(uint8_t *err) {
-    *err = 0;
     AX25_20_DEFAULT_XID_COP = ax25_xid_class_of_procedures_new(true, false, false, false, false, false, true, 0, err);
     AX25_22_DEFAULT_XID_COP = ax25_xid_class_of_procedures_new(true, false, false, false, false, false, true, 0, err);
     AX25_20_DEFAULT_XID_HDLCOPTFUNC = ax25_xid_hdlc_optional_functions_new(
@@ -1150,4 +1173,34 @@ void ax25_xid_init_defaults(uint8_t *err) {
     AX25_22_DEFAULT_XID_ACKTIMER = ax25_xid_big_endian_new(9, 3000, 2, err);
     AX25_20_DEFAULT_XID_RETRIES = ax25_xid_big_endian_new(10, 10, 2, err);
     AX25_22_DEFAULT_XID_RETRIES = ax25_xid_big_endian_new(10, 10, 2, err);
+}
+
+void ax25_xid_deinit_defaults(uint8_t *err) {
+    if (AX25_20_DEFAULT_XID_COP->data)
+        free(AX25_20_DEFAULT_XID_COP->data);
+    if (AX25_22_DEFAULT_XID_COP->data)
+        free(AX25_22_DEFAULT_XID_COP->data);
+
+    if (AX25_20_DEFAULT_XID_HDLCOPTFUNC->data)
+        free(AX25_20_DEFAULT_XID_HDLCOPTFUNC->data);
+    if (AX25_22_DEFAULT_XID_HDLCOPTFUNC->data)
+        free(AX25_22_DEFAULT_XID_HDLCOPTFUNC->data);
+
+    if (AX25_20_DEFAULT_XID_IFIELDRX->data)
+        free(AX25_20_DEFAULT_XID_IFIELDRX->data);
+    if (AX25_22_DEFAULT_XID_IFIELDRX->data)
+        free(AX25_22_DEFAULT_XID_IFIELDRX->data);
+    if (AX25_20_DEFAULT_XID_WINDOWSZRX->data)
+        free(AX25_20_DEFAULT_XID_WINDOWSZRX->data);
+    if (AX25_22_DEFAULT_XID_WINDOWSZRX->data)
+        free(AX25_22_DEFAULT_XID_WINDOWSZRX->data);
+    if (AX25_20_DEFAULT_XID_ACKTIMER->data)
+        free(AX25_20_DEFAULT_XID_ACKTIMER->data);
+    if (AX25_22_DEFAULT_XID_ACKTIMER->data)
+        free(AX25_22_DEFAULT_XID_ACKTIMER->data);
+    if (AX25_20_DEFAULT_XID_RETRIES->data)
+        free(AX25_20_DEFAULT_XID_RETRIES->data);
+    if (AX25_22_DEFAULT_XID_RETRIES->data)
+        free(AX25_22_DEFAULT_XID_RETRIES->data);
+
 }
