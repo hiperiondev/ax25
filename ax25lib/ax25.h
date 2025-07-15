@@ -230,6 +230,7 @@ typedef struct {
 
 typedef struct {
     ax25_frame_t base;
+    uint8_t control;
     uint8_t *payload;
     size_t payload_len;
 } ax25_raw_frame_t;

@@ -349,6 +349,12 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
         frame = (ax25_frame_t*) ax25_unnumbered_frame_decode(hdr_result.header, control, hdr_result.remaining + 1, hdr_result.remaining_len - 1, err);
     } else {
         if (modulo128 == MODULO128_NONE) {
+            if (hdr_result.remaining_len < 1) {
+                // Error: no control byte
+                *err = 4;
+                ax25_frame_header_free(hdr_result.header, err);
+                return NULL;
+            }
             ax25_raw_frame_t *raw = malloc(sizeof(ax25_raw_frame_t));
             if (!raw) {
                 *err = 4;
@@ -357,7 +363,8 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
             }
             raw->base.type = AX25_FRAME_RAW;
             raw->base.header = *hdr_result.header;
-            raw->payload_len = hdr_result.remaining_len;
+            raw->control = hdr_result.remaining[0];
+            raw->payload_len = hdr_result.remaining_len - 1;
             raw->payload = malloc(raw->payload_len);
             if (!raw->payload) {
                 *err = 5;
@@ -365,7 +372,7 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
                 ax25_frame_header_free(hdr_result.header, err);
                 return NULL;
             }
-            memcpy(raw->payload, hdr_result.remaining, raw->payload_len);
+            memcpy(raw->payload, hdr_result.remaining + 1, raw->payload_len);
             frame = (ax25_frame_t*) raw;
         } else {
             bool is_16bit = (modulo128 == MODULO128_TRUE);
@@ -511,15 +518,14 @@ void ax25_frame_free(ax25_frame_t *frame, uint8_t *err) {
 
 uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len, uint8_t *err) {
     *err = 0;
-    *len = frame->payload_len;
+    *len = 1 + frame->payload_len;
     uint8_t *bytes = malloc(*len);
-
     if (!bytes) {
         *err = 1;
         return NULL;
     }
-    memcpy(bytes, frame->payload, *len);
-
+    bytes[0] = frame->control;
+    memcpy(bytes + 1, frame->payload, frame->payload_len);
     return bytes;
 }
 
