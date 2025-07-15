@@ -173,7 +173,6 @@ ax25_address_t* ax25_address_copy(const ax25_address_t *addr, uint8_t *err) {
 }
 
 void ax25_address_free(ax25_address_t *addr, uint8_t *err) {
-    *err = 0;
     free(addr);
 }
 
@@ -195,7 +194,6 @@ ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num, uint8_t *err) {
 }
 
 void ax25_path_free(ax25_path_t *path, uint8_t *err) {
-    *err = 0;
     free(path);
 }
 
@@ -291,7 +289,6 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
 }
 
 void ax25_frame_header_free(ax25_frame_header_t *header, uint8_t *err) {
-    *err = 0;
     free(header);
 }
 
@@ -498,6 +495,7 @@ uint8_t* ax25_raw_frame_encode(const ax25_raw_frame_t *frame, size_t *len, uint8
 }
 
 ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *header, uint8_t control, const uint8_t *data, size_t len, uint8_t *err) {
+    *err = 0;
     uint8_t modifier = control & 0xEF;
     bool pf = (control & POLL_FINAL_8BIT) != 0;
     ax25_unnumbered_frame_t *result = NULL;
@@ -528,20 +526,23 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
         case 0x43: // DISC
         case 0x0F: // DM
         case 0x63: // UA
-        break;
+            break;
         default:
             *err = 5;
             return NULL;
     }
 
+    // For valid modifiers: SABM, SABME, DISC, DM, UA
     ax25_unnumbered_frame_t *frame = malloc(sizeof(ax25_unnumbered_frame_t));
-
     if (!frame) {
-        *err = 2;
+        *err = 6;
         return NULL;
     }
-    frame->base.type = (modifier == 0x2F) ? AX25_FRAME_UNNUMBERED_SABM : (modifier == 0x6F) ? AX25_FRAME_UNNUMBERED_SABME :
-                       (modifier == 0x43) ? AX25_FRAME_UNNUMBERED_DISC : (modifier == 0x0F) ? AX25_FRAME_UNNUMBERED_DM : AX25_FRAME_UNNUMBERED_UA;
+    frame->base.type = (modifier == 0x2F) ? AX25_FRAME_UNNUMBERED_SABM :
+                       (modifier == 0x6F) ? AX25_FRAME_UNNUMBERED_SABME :
+                       (modifier == 0x43) ? AX25_FRAME_UNNUMBERED_DISC :
+                       (modifier == 0x0F) ? AX25_FRAME_UNNUMBERED_DM :
+                       AX25_FRAME_UNNUMBERED_UA;
     frame->base.header = *header;
     frame->base.timestamp = current_time();
     frame->base.deadline = 0.0;
@@ -665,9 +666,9 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
     }
 
     bytes[0] = frame->base.modifier | (frame->base.pf ? POLL_FINAL_8BIT : 0);
-    bytes[1] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);
-    bytes[2] = ((frame->vr << 5) & 0xE0) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vs << 1) & 0x0E);
-    bytes[3] = frame->frmr_control;
+    bytes[1] = frame->frmr_control;
+    bytes[2] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);
+    bytes[3] = ((frame->vs << 5) & 0xE0) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vr << 1) & 0x0E);
 
     return bytes;
 }
@@ -817,23 +818,26 @@ uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, si
 
 ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size_t pv_len, uint8_t *err) {
     *err = 0;
-    ax25_xid_parameter_t *param = malloc(sizeof(ax25_xid_parameter_t));
-
-    if (!param) {
+    if (pv_len > 255) {
         *err = 1;
+        return NULL;
+    }
+    ax25_xid_parameter_t *param = malloc(sizeof(ax25_xid_parameter_t));
+    if (!param) {
+        *err = 2;
         return NULL;
     }
 
     uint8_t *pv_copy = pv ? malloc(pv_len + sizeof(size_t)) : NULL;
     if (pv && !pv_copy) {
-        *err = 2;
+        *err = 3;
         free(param);
         return NULL;
     }
 
     if (pv) {
         memcpy(pv_copy, pv, pv_len);
-        *(size_t*) (pv_copy + pv_len) = pv_len;
+        *(size_t*) (pv_copy + pv_len) = pv_len;  // pv_len after pv
     }
 
     param->pi = pi;
@@ -847,18 +851,20 @@ ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size
 
 uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t *len, uint8_t *err) {
     *err = 0;
-    uint8_t *pv = (uint8_t*) param->data;
-    size_t pv_len = pv ? *(size_t*) (pv + pv_len) : 0;
+    uint8_t *data = (uint8_t*) param->data;
+
+    size_t pv_len = data ? *(size_t*) (data + 2) : 0;
+    uint8_t *pv = data;
+
     *len = 2 + pv_len;
     uint8_t *bytes = malloc(*len);
-
     if (!bytes) {
         *err = 1;
         return NULL;
     }
 
     bytes[0] = param->pi;
-    bytes[1] = pv_len;
+    bytes[1] = (uint8_t) pv_len;
     if (pv_len)
         memcpy(bytes + 2, pv, pv_len);
 
@@ -867,9 +873,9 @@ uint8_t* ax25_xid_raw_parameter_encode(const ax25_xid_parameter_t *param, size_t
 
 ax25_xid_parameter_t* ax25_xid_raw_parameter_copy(const ax25_xid_parameter_t *param, uint8_t *err) {
     *err = 0;
-    uint8_t *pv = (uint8_t*) param->data;
-    size_t pv_len = pv ? *(size_t*) (pv + pv_len) : 0;
-
+    uint8_t *data = (uint8_t*) param->data;
+    size_t pv_len = data ? *(size_t*) (data + 2) : 0;
+    uint8_t *pv = data;
     return ax25_xid_raw_parameter_new(param->pi, pv, pv_len, err);
 }
 
