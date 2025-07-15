@@ -694,7 +694,7 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
     bytes[0] = frame->base.modifier | (frame->base.pf ? POLL_FINAL_8BIT : 0);
     bytes[1] = frame->frmr_control;
     bytes[2] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);
-    bytes[3] = ((frame->vs << 5) & 0xE0) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vr << 1) & 0x0E);
+    bytes[3] = ((frame->vr << 5) & 0xE0) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vs << 1) & 0x0E);
 
     return bytes;
 }
