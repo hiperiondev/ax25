@@ -49,10 +49,6 @@ ax25_xid_parameter_t *AX25_22_DEFAULT_XID_ACKTIMER = NULL;
 ax25_xid_parameter_t *AX25_20_DEFAULT_XID_RETRIES = NULL;
 ax25_xid_parameter_t *AX25_22_DEFAULT_XID_RETRIES = NULL;
 
-static double current_time() {
-    return (double) time(NULL);
-}
-
 static uint8_t* uint_encode(uint32_t value, bool big_endian, size_t length, size_t *out_len, uint8_t *err) {
     *err = 0;
 
@@ -361,8 +357,6 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
             }
             raw->base.type = AX25_FRAME_RAW;
             raw->base.header = *hdr_result.header;
-            raw->base.timestamp = current_time();
-            raw->base.deadline = 0.0;
             raw->payload_len = hdr_result.remaining_len;
             raw->payload = malloc(raw->payload_len);
             if (!raw->payload) {
@@ -576,8 +570,6 @@ ax25_unnumbered_frame_t* ax25_unnumbered_frame_decode(ax25_frame_header_t *heade
     frame->base.type = (modifier == 0x2F) ? AX25_FRAME_UNNUMBERED_SABM : (modifier == 0x6F) ? AX25_FRAME_UNNUMBERED_SABME :
                        (modifier == 0x43) ? AX25_FRAME_UNNUMBERED_DISC : (modifier == 0x0F) ? AX25_FRAME_UNNUMBERED_DM : AX25_FRAME_UNNUMBERED_UA;
     frame->base.header = *header;
-    frame->base.timestamp = current_time();
-    frame->base.deadline = 0.0;
     frame->pf = pf;
     frame->modifier = modifier;
 
@@ -618,8 +610,6 @@ ax25_unnumbered_information_frame_t* ax25_unnumbered_information_frame_decode(ax
 
     frame->base.base.type = AX25_FRAME_UNNUMBERED_INFORMATION;
     frame->base.base.header = *header;
-    frame->base.base.timestamp = current_time();
-    frame->base.base.deadline = 0.0;
     frame->base.pf = pf;
     frame->base.modifier = 0x03;
     frame->pid = data[0];
@@ -671,8 +661,6 @@ ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *h
 
     frame->base.base.type = AX25_FRAME_UNNUMBERED_FRMR;
     frame->base.base.header = *header;
-    frame->base.base.timestamp = current_time();
-    frame->base.base.deadline = 0.0;
     frame->base.pf = pf;
     frame->base.modifier = 0x87;
     frame->w = (data[0] & 0x01) != 0;
@@ -723,8 +711,6 @@ ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *hea
 
     frame->base.type = is_16bit ? AX25_FRAME_INFORMATION_16BIT : AX25_FRAME_INFORMATION_8BIT;
     frame->base.header = *header;
-    frame->base.timestamp = current_time();
-    frame->base.deadline = 0.0;
     frame->nr = is_16bit ? ((control & 0xFE00) >> 9) : ((control & 0xE0) >> 5);
     frame->pf = (control & (is_16bit ? POLL_FINAL_16BIT : POLL_FINAL_8BIT)) != 0;
     frame->ns = is_16bit ? ((control & 0x01FE) >> 1) : ((control & 0x0E) >> 1);
@@ -817,8 +803,6 @@ ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *hea
     }
     frame->base.type = type;
     frame->base.header = *header;
-    frame->base.timestamp = current_time();
-    frame->base.deadline = 0.0;
     frame->nr = is_16bit ? ((control & 0xFE00) >> 9) : ((control & 0xE0) >> 5);
     frame->pf = (control & (is_16bit ? POLL_FINAL_16BIT : POLL_FINAL_8BIT)) != 0;
     frame->code = code;
@@ -1001,8 +985,6 @@ ax25_exchange_identification_frame_t* ax25_exchange_identification_frame_decode(
 
     frame->base.base.type = AX25_FRAME_UNNUMBERED_XID;
     frame->base.base.header = *header;
-    frame->base.base.timestamp = current_time();
-    frame->base.base.deadline = 0.0;
     frame->base.pf = pf;
     frame->base.modifier = 0xAF;
     frame->fi = fi;
@@ -1080,8 +1062,6 @@ ax25_test_frame_t* ax25_test_frame_decode(ax25_frame_header_t *header, bool pf, 
 
     frame->base.base.type = AX25_FRAME_UNNUMBERED_TEST;
     frame->base.base.header = *header;
-    frame->base.base.timestamp = current_time();
-    frame->base.base.deadline = 0.0;
     frame->base.pf = pf;
     frame->base.modifier = 0xE3;
     frame->payload_len = len;

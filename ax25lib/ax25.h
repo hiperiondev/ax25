@@ -226,8 +226,6 @@ typedef struct {
 typedef struct {
     ax25_frame_type_t type;
     ax25_frame_header_t header;
-    double timestamp;
-    double deadline;
 } ax25_frame_t;
 
 typedef struct {
