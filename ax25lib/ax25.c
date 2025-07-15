@@ -263,9 +263,9 @@ header_decode_result_t ax25_frame_header_decode(const uint8_t *data, size_t len,
 
     header->destination = *addresses[0];
     header->source = *addresses[1];
-    header->cr = header->destination.ch;
-    header->src_cr = header->source.ch;
-    header->legacy = (header->destination.ch == header->source.ch);
+    // Set cr based on standard: command if dest ch=1 and src ch=0, response if dest ch=0 and src ch=1
+    header->cr = (header->destination.ch && !header->source.ch);
+    header->src_cr = header->source.ch; // Retain source ch for reference
     header->repeaters.num_repeaters = addr_count - 2;
     for (int i = 0; i < header->repeaters.num_repeaters; i++) {
         header->repeaters.repeaters[i] = *addresses[i + 2];
@@ -285,7 +285,6 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
     *err = 0;
     size_t total_len = 7 * (2 + header->repeaters.num_repeaters);
     uint8_t *bytes = malloc(total_len);
-
     if (!bytes) {
         *err = 1;
         return NULL;
@@ -294,7 +293,7 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
     size_t offset = 0;
     ax25_address_t dest = header->destination;
     dest.extension = false;
-    dest.ch = header->cr;
+    dest.ch = header->cr; // Command: ch=1, Response: ch=0
     size_t dest_len;
     uint8_t *dest_bytes = ax25_address_encode(&dest, &dest_len, err);
     memcpy(bytes + offset, dest_bytes, dest_len);
@@ -303,7 +302,7 @@ uint8_t* ax25_frame_header_encode(const ax25_frame_header_t *header, size_t *len
 
     ax25_address_t src = header->source;
     src.extension = (header->repeaters.num_repeaters == 0);
-    src.ch = header->src_cr;
+    src.ch = !header->cr; // Command: ch=0, Response: ch=1
     size_t src_len;
     uint8_t *src_bytes = ax25_address_encode(&src, &src_len, err);
     memcpy(bytes + offset, src_bytes, src_len);

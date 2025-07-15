@@ -210,7 +210,7 @@ int test_unnumbered_information_frame_functions() {
 int test_frame_reject_frame_functions() {
     ax25_frame_reject_frame_t frame = { .base.base.type = AX25_FRAME_UNNUMBERED_FRMR, .base.base.header = { .destination = { .callsign = "AAAAAA", .ssid = 0,
             .ch = false, .res0 = true, .res1 = true, .extension = false }, .source = { .callsign = "BBBBBB", .ssid = 0, .ch = false, .res0 = true, .res1 = true,
-            .extension = true }, .cr = false, .src_cr = false, .legacy = true, .repeaters = { .num_repeaters = 0 } }, .base.base.timestamp = 0.0,
+            .extension = true }, .cr = false, .src_cr = false, .repeaters = { .num_repeaters = 0 } }, .base.base.timestamp = 0.0,
             .base.base.deadline = 0.0, .base.pf = false, .base.modifier = 0x87, .frmr_control = 0x0A, .w = true, .x = false, .y = false, .z = false, .vr = 0,
             .frmr_cr = false, .vs = 2 };
 

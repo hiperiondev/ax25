@@ -221,7 +221,6 @@ typedef struct {
     ax25_path_t repeaters;
     bool cr;
     bool src_cr;
-    bool legacy;
 } ax25_frame_header_t;
 
 typedef struct {
