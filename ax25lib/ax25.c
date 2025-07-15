@@ -1175,31 +1175,32 @@ void ax25_xid_init_defaults(uint8_t *err) {
 }
 
 void ax25_xid_deinit_defaults(uint8_t *err) {
-    if (AX25_20_DEFAULT_XID_COP->data)
-        free(AX25_20_DEFAULT_XID_COP->data);
-    if (AX25_22_DEFAULT_XID_COP->data)
-        free(AX25_22_DEFAULT_XID_COP->data);
+#define FREE_XID_PARAM(param) \
+    do { \
+        if (param) { \
+            if (param->free) { \
+                param->free(param, err); \
+                if (*err != 0) return; \
+            } else { \
+                free(param->data); \
+                free(param); \
+            } \
+            param = NULL; \
+        } \
+    } while (0)
 
-    if (AX25_20_DEFAULT_XID_HDLCOPTFUNC->data)
-        free(AX25_20_DEFAULT_XID_HDLCOPTFUNC->data);
-    if (AX25_22_DEFAULT_XID_HDLCOPTFUNC->data)
-        free(AX25_22_DEFAULT_XID_HDLCOPTFUNC->data);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_COP);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_COP);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_HDLCOPTFUNC);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_HDLCOPTFUNC);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_IFIELDRX);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_IFIELDRX);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_WINDOWSZRX);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_WINDOWSZRX);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_ACKTIMER);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_ACKTIMER);
+    FREE_XID_PARAM(AX25_20_DEFAULT_XID_RETRIES);
+    FREE_XID_PARAM(AX25_22_DEFAULT_XID_RETRIES);
 
-    if (AX25_20_DEFAULT_XID_IFIELDRX->data)
-        free(AX25_20_DEFAULT_XID_IFIELDRX->data);
-    if (AX25_22_DEFAULT_XID_IFIELDRX->data)
-        free(AX25_22_DEFAULT_XID_IFIELDRX->data);
-    if (AX25_20_DEFAULT_XID_WINDOWSZRX->data)
-        free(AX25_20_DEFAULT_XID_WINDOWSZRX->data);
-    if (AX25_22_DEFAULT_XID_WINDOWSZRX->data)
-        free(AX25_22_DEFAULT_XID_WINDOWSZRX->data);
-    if (AX25_20_DEFAULT_XID_ACKTIMER->data)
-        free(AX25_20_DEFAULT_XID_ACKTIMER->data);
-    if (AX25_22_DEFAULT_XID_ACKTIMER->data)
-        free(AX25_22_DEFAULT_XID_ACKTIMER->data);
-    if (AX25_20_DEFAULT_XID_RETRIES->data)
-        free(AX25_20_DEFAULT_XID_RETRIES->data);
-    if (AX25_22_DEFAULT_XID_RETRIES->data)
-        free(AX25_22_DEFAULT_XID_RETRIES->data);
-
+#undef FREE_XID_PARAM
 }
