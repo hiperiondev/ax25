@@ -1293,6 +1293,133 @@ int test_segmentation_reassembly() {
     return result;
 }
 
+void test_ax25_frame_print() {
+    // UI frame
+    unsigned char ui_frame[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
+    printf("UI Frame:\n");
+    ax25_frame_print(ui_frame, sizeof(ui_frame));
+
+    // I-frame
+    unsigned char i_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o', ',',
+            ' ', 'W', 'o', 'r', 'l', 'd', '!' };
+    printf("\nI-Frame:\n");
+    ax25_frame_print(i_frame, sizeof(i_frame));
+
+    // SABM frame
+    unsigned char sabm_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x3F };
+    printf("\nSABM Frame:\n");
+    ax25_frame_print(sabm_frame, sizeof(sabm_frame));
+
+    // UA frame
+    unsigned char ua_frame[] = { 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x73 };
+    printf("\nUA Frame:\n");
+    ax25_frame_print(ua_frame, sizeof(ua_frame));
+
+    // RR frame
+    unsigned char rr_frame[] = { 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x31 };
+    printf("\nRR Frame:\n");
+    ax25_frame_print(rr_frame, sizeof(rr_frame));
+
+    // DISC frame
+    unsigned char disc_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x43 };
+    printf("\nDISC Frame:\n");
+    ax25_frame_print(disc_frame, sizeof(disc_frame));
+}
+
+void test_ax25_hdlc_frame_print() {
+    // Inline bit reversal function
+    unsigned char reverse_bits(unsigned char byte) {
+        byte = ((byte >> 1) & 0x55) | ((byte & 0x55) << 1);
+        byte = ((byte >> 2) & 0x33) | ((byte & 0x33) << 2);
+        byte = ((byte >> 4) & 0x0F) | ((byte & 0x0F) << 4);
+        return byte;
+    }
+
+    // Inline CRC calculation function
+    uint16_t calculate_crc(unsigned char* frame, int len) {
+        uint16_t crc = 0xFFFF;
+        for (int i = 0; i < len; i++) {
+            crc ^= frame[i];
+            for (int j = 0; j < 8; j++) {
+                if (crc & 0x0001) {
+                    crc = (crc >> 1) ^ 0x8408; // CRC-CCITT polynomial
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+        return crc ^ 0xFFFF;
+    }
+
+    // Helper to construct HDLC frame
+    unsigned char* construct_hdlc_frame(unsigned char* ax25_frame, int ax25_len, int* hdlc_len) {
+        // Reverse bits of each byte
+        unsigned char* reversed = malloc(ax25_len);
+        for (int i = 0; i < ax25_len; i++) {
+            reversed[i] = reverse_bits(ax25_frame[i]);
+        }
+        // Calculate CRC
+        uint16_t crc = calculate_crc(reversed, ax25_len);
+        // Append CRC
+        unsigned char* frame_with_fcs = malloc(ax25_len + 2);
+        memcpy(frame_with_fcs, reversed, ax25_len);
+        frame_with_fcs[ax25_len] = (crc >> 8) & 0xFF;
+        frame_with_fcs[ax25_len + 1] = crc & 0xFF;
+        free(reversed);
+        // Add flags
+        *hdlc_len = ax25_len + 4; // flags + fcs
+        unsigned char* hdlc_frame = malloc(*hdlc_len);
+        hdlc_frame[0] = 0x7E;
+        memcpy(&hdlc_frame[1], frame_with_fcs, ax25_len + 2);
+        hdlc_frame[*hdlc_len - 1] = 0x7E;
+        free(frame_with_fcs);
+        return hdlc_frame;
+    }
+
+    // UI frame
+    unsigned char ui_frame[] = {0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T'};
+    int hdlc_len;
+    unsigned char* hdlc_ui_frame = construct_hdlc_frame(ui_frame, sizeof(ui_frame), &hdlc_len);
+    printf("HDLC UI Frame:\n");
+    ax25_hdlc_frame_print(hdlc_ui_frame, hdlc_len);
+    free(hdlc_ui_frame);
+
+    // I-frame
+    unsigned char i_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
+    unsigned char* hdlc_i_frame = construct_hdlc_frame(i_frame, sizeof(i_frame), &hdlc_len);
+    printf("\nHDLC I-Frame:\n");
+    ax25_hdlc_frame_print(hdlc_i_frame, hdlc_len);
+    free(hdlc_i_frame);
+
+    // SABM frame
+    unsigned char sabm_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x3F};
+    unsigned char* hdlc_sabm_frame = construct_hdlc_frame(sabm_frame, sizeof(sabm_frame), &hdlc_len);
+    printf("\nHDLC SABM Frame:\n");
+    ax25_hdlc_frame_print(hdlc_sabm_frame, hdlc_len);
+    free(hdlc_sabm_frame);
+
+    // UA frame
+    unsigned char ua_frame[] = {0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x73};
+    unsigned char* hdlc_ua_frame = construct_hdlc_frame(ua_frame, sizeof(ua_frame), &hdlc_len);
+    printf("\nHDLC UA Frame:\n");
+    ax25_hdlc_frame_print(hdlc_ua_frame, hdlc_len);
+    free(hdlc_ua_frame);
+
+    // RR frame
+    unsigned char rr_frame[] = {0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x31};
+    unsigned char* hdlc_rr_frame = construct_hdlc_frame(rr_frame, sizeof(rr_frame), &hdlc_len);
+    printf("\nHDLC RR Frame:\n");
+    ax25_hdlc_frame_print(hdlc_rr_frame, hdlc_len);
+    free(hdlc_rr_frame);
+
+    // DISC frame
+    unsigned char disc_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x43};
+    unsigned char* hdlc_disc_frame = construct_hdlc_frame(disc_frame, sizeof(disc_frame), &hdlc_len);
+    printf("\nHDLC DISC Frame:\n");
+    ax25_hdlc_frame_print(hdlc_disc_frame, hdlc_len);
+    free(hdlc_disc_frame);
+}
+
 int main() {
     int result = 0;
     printf("\n----------------------------------------------------------------------------------\n");
@@ -1317,8 +1444,12 @@ int main() {
     result |= test_frmr_frame_functions();
     result |= test_auto_modulo_detection();
     result |= test_segmentation_reassembly();
-
-    printf("\nTests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
+    printf("\n----------------------------------------------------------------------------------\n\n");
+    test_ax25_frame_print();
+    printf("\n----------------------------------------------------------------------------------\n");
+    test_ax25_hdlc_frame_print();
+    printf("\n----------------------------------------------------------------------------------\n");
+    printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
     printf("----------------------------------------------------------------------------------\n\n");
     return result;
 }
