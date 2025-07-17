@@ -404,42 +404,57 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
 
 uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err) {
     *err = 0;
-    size_t header_len, payload_len;
-    uint8_t *header_bytes = ax25_frame_header_encode(&frame->header, &header_len, err);
 
+    // Determine if it's a modulo-128 frame
+    bool is_modulo128 = (frame->type == AX25_FRAME_INFORMATION_16BIT ||
+                         frame->type == AX25_FRAME_SUPERVISORY_RR_16BIT ||
+                         frame->type == AX25_FRAME_SUPERVISORY_RNR_16BIT ||
+                         frame->type == AX25_FRAME_SUPERVISORY_REJ_16BIT ||
+                         frame->type == AX25_FRAME_SUPERVISORY_SREJ_16BIT ||
+                         frame->type == AX25_FRAME_UNNUMBERED_SABME);
+
+    // Create a copy of the header
+    ax25_frame_header_t header_copy = frame->header;
+    if (is_modulo128) {
+        header_copy.source.res1 = false;
+    }
+
+    size_t header_len;
+    uint8_t *header_bytes = ax25_frame_header_encode(&header_copy, &header_len, err);
     if (!header_bytes) {
         *err = 1;
         return NULL;
     }
 
     uint8_t *payload_bytes = NULL;
+    size_t payload_len;
     switch (frame->type) {
         case AX25_FRAME_RAW:
             payload_bytes = ax25_raw_frame_encode((ax25_raw_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_UNNUMBERED_INFORMATION:
             payload_bytes = ax25_unnumbered_information_frame_encode((ax25_unnumbered_information_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_UNNUMBERED_SABM:
         case AX25_FRAME_UNNUMBERED_SABME:
         case AX25_FRAME_UNNUMBERED_DISC:
         case AX25_FRAME_UNNUMBERED_DM:
         case AX25_FRAME_UNNUMBERED_UA:
             payload_bytes = ax25_unnumbered_frame_encode((ax25_unnumbered_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_UNNUMBERED_FRMR:
             payload_bytes = ax25_frame_reject_frame_encode((ax25_frame_reject_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_UNNUMBERED_XID:
             payload_bytes = ax25_exchange_identification_frame_encode((ax25_exchange_identification_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_UNNUMBERED_TEST:
             payload_bytes = ax25_test_frame_encode((ax25_test_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_INFORMATION_8BIT:
         case AX25_FRAME_INFORMATION_16BIT:
             payload_bytes = ax25_information_frame_encode((ax25_information_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         case AX25_FRAME_SUPERVISORY_RR_8BIT:
         case AX25_FRAME_SUPERVISORY_RNR_8BIT:
         case AX25_FRAME_SUPERVISORY_REJ_8BIT:
@@ -449,7 +464,7 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
         case AX25_FRAME_SUPERVISORY_REJ_16BIT:
         case AX25_FRAME_SUPERVISORY_SREJ_16BIT:
             payload_bytes = ax25_supervisory_frame_encode((ax25_supervisory_frame_t*) frame, &payload_len, err);
-        break;
+            break;
         default:
             *err = 2;
             free(header_bytes);
@@ -719,7 +734,7 @@ ax25_information_frame_t* ax25_information_frame_decode(ax25_frame_header_t *hea
     frame->base.header = *header;
     frame->nr = is_16bit ? ((control & 0xFE00) >> 9) : ((control & 0xE0) >> 5);
     frame->pf = (control & (is_16bit ? POLL_FINAL_16BIT : POLL_FINAL_8BIT)) != 0;
-    frame->ns = is_16bit ? ((control & 0x01FE) >> 1) : ((control & 0x0E) >> 1);
+    frame->ns = is_16bit ? ((control & 0x00FE) >> 1) : ((control & 0x0E) >> 1); // Corrected mask from 0x01FE to 0x00FE
     frame->pid = data[0];
     frame->payload_len = len - 1;
     frame->payload = malloc(frame->payload_len);
@@ -755,6 +770,28 @@ uint8_t* ax25_information_frame_encode(const ax25_information_frame_t *frame, si
         bytes[0] = ((frame->nr << 5) & 0xE0) | (frame->pf ? POLL_FINAL_8BIT : 0) | ((frame->ns << 1) & 0x0E) | CONTROL_I_VAL;
         bytes[1] = frame->pid;
         memcpy(bytes + 2, frame->payload, frame->payload_len);
+    }
+
+    return bytes;
+}
+
+uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, size_t *len, uint8_t *err) {
+    *err = 0;
+    bool is_16bit = (frame->base.type >= AX25_FRAME_SUPERVISORY_RR_16BIT);
+    *len = is_16bit ? 2 : 1;
+    uint8_t *bytes = malloc(*len);
+
+    if (!bytes) {
+        *err = 1;
+        return NULL;
+    }
+
+    if (is_16bit) {
+        uint16_t control = ((frame->nr << 9) & 0xFE00) | (frame->pf ? POLL_FINAL_16BIT : 0) | (frame->code & 0x0C) | CONTROL_S_VAL;
+        bytes[0] = control & 0xFF;
+        bytes[1] = (control >> 8) & 0xFF;
+    } else {
+        bytes[0] = ((frame->nr << 5) & 0xE0) | (frame->pf ? POLL_FINAL_8BIT : 0) | (frame->code & 0x0C) | CONTROL_S_VAL;
     }
 
     return bytes;
@@ -814,28 +851,6 @@ ax25_supervisory_frame_t* ax25_supervisory_frame_decode(ax25_frame_header_t *hea
     frame->code = code;
 
     return frame;
-}
-
-uint8_t* ax25_supervisory_frame_encode(const ax25_supervisory_frame_t *frame, size_t *len, uint8_t *err) {
-    *err = 0;
-    bool is_16bit = (frame->base.type >= AX25_FRAME_SUPERVISORY_RR_16BIT);
-    *len = is_16bit ? 2 : 1;
-    uint8_t *bytes = malloc(*len);
-
-    if (!bytes) {
-        *err = 1;
-        return NULL;
-    }
-
-    if (is_16bit) {
-        uint16_t control = ((frame->nr << 9) & 0xFE00) | (frame->pf ? POLL_FINAL_16BIT : 0) | (frame->code & 0x0C) | CONTROL_S_VAL;
-        bytes[0] = control & 0xFF;
-        bytes[1] = (control >> 8) & 0xFF;
-    } else {
-        bytes[0] = ((frame->nr << 5) & 0xE0) | (frame->pf ? POLL_FINAL_8BIT : 0) | (frame->code & 0x0C) | CONTROL_S_VAL;
-    }
-
-    return bytes;
 }
 
 ax25_xid_parameter_t* ax25_xid_raw_parameter_new(int pi, const uint8_t *pv, size_t pv_len, uint8_t *err) {

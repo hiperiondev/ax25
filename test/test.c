@@ -110,10 +110,6 @@ int test_address_functions() {
         TEST_ASSERT(encoded != NULL, "ax25_address_encode should return non-NULL", err);
         TEST_ASSERT(len == 7, "Encoded address length should be 7 bytes", err);
         if (encoded) {
-            // Expected encoded bytes for "NOCALL-7*"
-            // Callsign "NOCALL" shifted left by 1: 'N'<<1=0x9C, 'O'<<1=0x9E, 'C'<<1=0x86, 'A'<<1=0x82, 'L'<<1=0x98, 'L'<<1=0x98
-            // SSID byte: (ssid<<1) | (extension?1:0) | (res0?0x20:0) | (res1?0x40:0) | (ch?0x80:0)
-            // For ssid=7, extension=false, res0=true, res1=true, ch=true: (7<<1)=0x0E | 0x00 | 0x20 | 0x40 | 0x80 = 0xEE
             uint8_t expected[] = { 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xEE };
             TEST_ASSERT(memcmp(encoded, expected, 7) == 0, "Encoded address should match expected bytes", err);
 
@@ -146,6 +142,29 @@ int test_address_functions() {
         }
         ax25_address_free(addr, &err);
     }
+
+    // Test modulo-128 source address with res1 = false
+    ax25_address_t *addr_mod128 = ax25_address_from_string("SOURCE-0", &err);
+    TEST_ASSERT(addr_mod128 != NULL, "ax25_address_from_string should return non-NULL for modulo-128 source", err);
+    if (addr_mod128) {
+        addr_mod128->res1 = false; // Set res1 to false for modulo-128 source address
+        TEST_ASSERT(addr_mod128->res0 == true, "res0 should be true for modulo-128 source", err);
+        TEST_ASSERT(addr_mod128->res1 == false, "res1 should be false for modulo-128 source", err);
+
+        size_t len;
+        uint8_t *encoded = ax25_address_encode(addr_mod128, &len, &err);
+        TEST_ASSERT(encoded != NULL, "ax25_address_encode should return non-NULL for modulo-128 source", err);
+        TEST_ASSERT(len == 7, "Encoded length should be 7 for modulo-128 source", err);
+        if (encoded) {
+            // Expected SSID byte: SSID=0 (0<<1)=0x00, extension=0 (0x00), res0=1 (0x20), res1=0 (0x00), ch=0 (0x00) = 0x20
+            uint8_t expected[] = { 'S' << 1, 'O' << 1, 'U' << 1, 'R' << 1, 'C' << 1, 'E' << 1, 0x20 }; // 0xA2, 0x9E, 0xB4, 0xA0, 0x86, 0x8A, 0x20
+            TEST_ASSERT(memcmp(encoded, expected, 7) == 0, "Encoded modulo-128 source address should match expected bytes", err);
+            TEST_ASSERT((encoded[6] & 0x40) == 0, "Bit 6 (res1) should be 0 for modulo-128 source address", err);
+            free(encoded);
+        }
+        ax25_address_free(addr_mod128, &err);
+    }
+
     return 0;
 }
 
@@ -168,6 +187,85 @@ int test_path_functions() {
     }
     ax25_address_free(addr1, &err);
     ax25_address_free(addr2, &err);
+    return 0;
+}
+
+int test_modulo128_source_address() {
+    // Create addresses
+    ax25_address_t dest = { .callsign = "NOCALL", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    ax25_address_t src = { .callsign = "REPEAT", .ssid = 1, .ch = false, .res0 = true, .res1 = true, .extension = true };
+    // Set callsign properly
+    memset(dest.callsign, ' ', 6);
+    memcpy(dest.callsign, "NOCALL", 6);
+    memset(src.callsign, ' ', 6);
+    memcpy(src.callsign, "REPEAT", 6);
+
+    // Create a modulo-128 I-frame
+    ax25_information_frame_t i_frame;
+    i_frame.base.type = AX25_FRAME_INFORMATION_16BIT;
+    i_frame.base.header.destination = dest;
+    i_frame.base.header.source = src;
+    i_frame.base.header.cr = true;
+    i_frame.base.header.src_cr = false;
+    i_frame.base.header.repeaters.num_repeaters = 0;
+    i_frame.nr = 3;
+    i_frame.pf = true;
+    i_frame.ns = 5;
+    i_frame.pid = 0xF0;
+    i_frame.payload_len = 4;
+    i_frame.payload = (uint8_t*)"TEST";
+
+    // Encode the frame
+    size_t len;
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*)&i_frame, &len, &err);
+    TEST_ASSERT(encoded != NULL, "Frame encoding should succeed", err);
+    if (encoded) {
+        // Source address is bytes 7 to 13
+        uint8_t source_ssid_byte = encoded[13];
+        TEST_ASSERT((source_ssid_byte & 0x40) == 0, "Source SSID bit 6 should be 0 for modulo-128", err);
+        // Expected SSID byte: 0x23
+        TEST_ASSERT(source_ssid_byte == 0x23, "Source SSID byte should be 0x23", err);
+        free(encoded);
+    }
+    return 0;
+}
+
+int test_modulo8_source_address() {
+    // Create addresses
+    ax25_address_t dest = { .callsign = "NOCALL", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    ax25_address_t src = { .callsign = "REPEAT", .ssid = 1, .ch = false, .res0 = true, .res1 = true, .extension = true };
+    memset(dest.callsign, ' ', 6);
+    memcpy(dest.callsign, "NOCALL", 6);
+    memset(src.callsign, ' ', 6);
+    memcpy(src.callsign, "REPEAT", 6);
+
+    // Create a modulo-8 I-frame
+    ax25_information_frame_t i_frame;
+    i_frame.base.type = AX25_FRAME_INFORMATION_8BIT;
+    i_frame.base.header.destination = dest;
+    i_frame.base.header.source = src;
+    i_frame.base.header.cr = true;
+    i_frame.base.header.src_cr = false;
+    i_frame.base.header.repeaters.num_repeaters = 0;
+    i_frame.nr = 3;
+    i_frame.pf = true;
+    i_frame.ns = 5;
+    i_frame.pid = 0xF0;
+    i_frame.payload_len = 4;
+    i_frame.payload = (uint8_t*)"TEST";
+
+    // Encode the frame
+    size_t len;
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*)&i_frame, &len, &err);
+    TEST_ASSERT(encoded != NULL, "Frame encoding should succeed", err);
+    if (encoded) {
+        // Source address is bytes 7 to 13
+        uint8_t source_ssid_byte = encoded[13];
+        TEST_ASSERT((source_ssid_byte & 0x40) == 0x40, "Source SSID bit 6 should be 1 for modulo-8", err);
+        // Expected SSID byte: 0x63
+        TEST_ASSERT(source_ssid_byte == 0x63, "Source SSID byte should be 0x63", err);
+        free(encoded);
+    }
     return 0;
 }
 
@@ -538,6 +636,99 @@ int test_test_frame_functions() {
     return err ? 1 : 0;
 }
 
+int test_ax25_modulo128(void) {
+    uint8_t err;
+    ax25_frame_t *frame;
+
+    // Modulo-128 RR frame: N(R)=4, P/F=0
+    uint8_t ax25_rr_frame_mod128[] = { 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE0, // Dest: NOCALL-0, ch=1
+            0xA6, 0x8A, 0xA0, 0x8A, 0x82, 0xA2, 0x63, // Src: REPEAT-1, ch=0, extension=1
+            0x01, 0x08  // Control: First byte 0x01 (S=00, 01), Second byte 0x08 (N(R)=4, P/F=0)
+            };
+    size_t ax25_rr_frame_mod128_len = sizeof(ax25_rr_frame_mod128);
+
+    frame = ax25_frame_decode(ax25_rr_frame_mod128, ax25_rr_frame_mod128_len, 1, &err);
+    TEST_ASSERT(frame != NULL, "Decoding modulo-128 RR frame", err);
+
+    if (frame) {
+        TEST_ASSERT(frame->type == AX25_FRAME_SUPERVISORY_RR_16BIT, "Frame type should be RR 16-bit", err);
+        ax25_supervisory_frame_t *s_frame = (ax25_supervisory_frame_t*) frame;
+        TEST_ASSERT(s_frame->nr == 4, "nr should be 4", err);
+        TEST_ASSERT(s_frame->pf == false, "Poll/Final should be false", err);
+        TEST_ASSERT(s_frame->code == 0x00, "Code should be 0x00 (RR)", err);
+        ax25_frame_free(frame, &err);
+    }
+
+    return 0;
+}
+
+int test_ax25_modulo128_encode() {
+    // Create addresses
+    ax25_address_t *dest = ax25_address_from_string("NOCALL-0", &err);
+    TEST_ASSERT(dest != NULL, "Destination address creation should succeed", err);
+    ax25_address_t *src = ax25_address_from_string("REPEAT-1", &err);
+    TEST_ASSERT(src != NULL, "Source address creation should succeed", err);
+    if (!dest || !src)
+        return 1;
+
+    // Adjust source address for modulo-128: res1 = false
+    src->res1 = false;
+
+    // Create modulo-128 I-frame: N(S)=5, N(R)=3, P/F=1, PID=0xF0, Payload="TEST"
+    ax25_information_frame_t *i_frame = malloc(sizeof(ax25_information_frame_t));
+    TEST_ASSERT(i_frame != NULL, "I-frame allocation should succeed", err);
+    if (!i_frame) {
+        ax25_address_free(dest, &err);
+        ax25_address_free(src, &err);
+        return 1;
+    }
+
+    i_frame->base.type = AX25_FRAME_INFORMATION_16BIT;
+    i_frame->base.header.destination = *dest;
+    i_frame->base.header.source = *src;
+    i_frame->base.header.cr = true; // Command frame
+    i_frame->base.header.src_cr = false;
+    i_frame->base.header.repeaters.num_repeaters = 0;
+    i_frame->nr = 3;
+    i_frame->pf = true;
+    i_frame->ns = 5;
+    i_frame->pid = 0xF0;
+    i_frame->payload_len = 4;
+    i_frame->payload = malloc(4);
+    TEST_ASSERT(i_frame->payload != NULL, "Payload allocation should succeed", err);
+    if (!i_frame->payload) {
+        free(i_frame);
+        ax25_address_free(dest, &err);
+        ax25_address_free(src, &err);
+        return 1;
+    }
+    memcpy(i_frame->payload, "TEST", 4);
+
+    // Encode the frame
+    size_t len;
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*) i_frame, &len, &err);
+    TEST_ASSERT(encoded != NULL, "Frame encoding should succeed", err);
+    if (encoded) {
+        // Expected frame:
+        // Dest: NOCALL-0, ch=1, res0=1, res1=1, ext=0: 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE0
+        // Src:  REPEAT-1, ch=0, res0=1, res1=0, ext=1: 0xA6, 0x8A, 0xA0, 0x8A, 0x82, 0xA2, 0x23
+        // Control: 0x0A (N(S)=5, I=0), 0x07 (N(R)=3, P/F=1)
+        // PID: 0xF0, Payload: "TEST"
+        uint8_t expected[] = { 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE0, 0xA6, 0x8A, 0xA0, 0x8A, 0x82, 0xA2, 0x23, 0x0A, 0x07, 0xF0, 'T', 'E', 'S', 'T' };
+        size_t expected_len = sizeof(expected);
+        COMPARE_FRAME(encoded, len, expected, expected_len, "Modulo-128 I-frame encoding should match expected bytes");
+        TEST_ASSERT((encoded[13] & 0x40) == 0, "Source SSID bit 6 (res1) should be 0 for modulo-128", err);
+        free(encoded);
+    }
+
+    // Clean up
+    free(i_frame->payload);
+    free(i_frame);
+    ax25_address_free(dest, &err);
+    ax25_address_free(src, &err);
+    return 0;
+}
+
 int test_ax25_connection(void) {
     // AX.25 Connection Test Packets
     // 1. CONNECT Request (Station A -> Station B: SABM)
@@ -725,7 +916,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(encodedFrame, encodedLen, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed for UI frame", err);
         TEST_ASSERT(decodedLen == ax25_ui_frame_len, "Decoded length should match original UI frame", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_ui_frame, ax25_ui_frame_len, "Decoded UI frame should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_ui_frame, ax25_ui_frame_len, "Decoded UI frame should match original");
         ax25_frame_t *frame = ax25_frame_decode(decodedFrame, decodedLen, 0, &err);
         TEST_ASSERT(frame != NULL, "ax25_frame_decode should succeed for UI frame", err);
         if (frame) {
@@ -740,7 +931,8 @@ int test_hdlc() {
 
     // Test Case 2: Valid I-frame
     {
-        unsigned char ax25_i_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o' };
+        unsigned char ax25_i_frame[] =
+                { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o' };
         size_t ax25_i_frame_len = sizeof(ax25_i_frame);
         unsigned char ax25_with_fcs[sizeof(ax25_i_frame) + 2];
         memcpy(ax25_with_fcs, ax25_i_frame, ax25_i_frame_len);
@@ -752,7 +944,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(encodedFrame, encodedLen, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed for I-frame", err);
         TEST_ASSERT(decodedLen == ax25_i_frame_len, "Decoded length should match original I-frame", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_i_frame, ax25_i_frame_len, "Decoded I-frame should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_i_frame, ax25_i_frame_len, "Decoded I-frame should match original");
         ax25_frame_t *frame = ax25_frame_decode(decodedFrame, decodedLen, 0, &err);
         TEST_ASSERT(frame != NULL, "ax25_frame_decode should succeed for I-frame", err);
         if (frame) {
@@ -770,7 +962,8 @@ int test_hdlc() {
 
     // Test Case 3: Bit-stuffing
     {
-        uint8_t ax25_bitstuff_frame[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 0x1F, 0x1F, 0x1F, 0x1F };
+        uint8_t ax25_bitstuff_frame[] =
+                { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 0x1F, 0x1F, 0x1F, 0x1F };
         size_t ax25_bitstuff_frame_len = sizeof(ax25_bitstuff_frame);
         unsigned char ax25_with_fcs[sizeof(ax25_bitstuff_frame) + 2];
         memcpy(ax25_with_fcs, ax25_bitstuff_frame, ax25_bitstuff_frame_len);
@@ -782,7 +975,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(encodedFrame, encodedLen, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed for bitstuff frame", err);
         TEST_ASSERT(decodedLen == ax25_bitstuff_frame_len, "Decoded length should match original bitstuff frame", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_bitstuff_frame, ax25_bitstuff_frame_len, "Decoded bitstuff frame should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_bitstuff_frame, ax25_bitstuff_frame_len, "Decoded bitstuff frame should match original");
     }
 
     // Test Case 4: Invalid FCS
@@ -833,7 +1026,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(encodedFrame, encodedLen, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed for RR frame", err);
         TEST_ASSERT(decodedLen == ax25_rr_frame_len, "Decoded length should match original RR frame", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_rr_frame, ax25_rr_frame_len, "Decoded RR frame should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_rr_frame, ax25_rr_frame_len, "Decoded RR frame should match original");
         ax25_frame_t *frame = ax25_frame_decode(decodedFrame, decodedLen, 0, &err);
         TEST_ASSERT(frame != NULL, "ax25_frame_decode should succeed for RR frame", err);
         if (frame) {
@@ -864,7 +1057,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(multi_flag_frame, encodedLen + 2, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed with multiple flags", err);
         TEST_ASSERT(decodedLen == ax25_ui_frame_len, "Decoded length should match original with multiple flags", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_ui_frame, ax25_ui_frame_len, "Decoded frame with multiple flags should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_ui_frame, ax25_ui_frame_len, "Decoded frame with multiple flags should match original");
     }
 
     // Test Case 9: Maximum size frame (256 bytes payload)
@@ -875,7 +1068,7 @@ int test_hdlc() {
         ax25_max_frame[14] = 0x03; // Control (UI)
         ax25_max_frame[15] = 0xF0; // PID
         for (int i = 0; i < 256; i++) {
-            ax25_max_frame[16 + i] = (uint8_t)(i & 0xFF);
+            ax25_max_frame[16 + i] = (uint8_t) (i & 0xFF);
         }
         size_t ax25_max_frame_len = sizeof(ax25_max_frame);
         unsigned char ax25_with_fcs[sizeof(ax25_max_frame) + 2];
@@ -888,7 +1081,7 @@ int test_hdlc() {
         int decode_result = hdlc_frame_decode(encodedFrame, encodedLen, decodedFrame, &decodedLen);
         TEST_ASSERT(decode_result == 0, "hdlc_frame_decode should succeed for max size frame", err);
         TEST_ASSERT(decodedLen == ax25_max_frame_len, "Decoded length should match original max size frame", err);
-        COMPARE_FRAME(decodedFrame, (size_t)decodedLen, ax25_max_frame, ax25_max_frame_len, "Decoded max size frame should match original");
+        COMPARE_FRAME(decodedFrame, (size_t )decodedLen, ax25_max_frame, ax25_max_frame_len, "Decoded max size frame should match original");
     }
 
     // Test Case 10: Frame with flags in middle (invalid HDLC)
@@ -930,7 +1123,8 @@ int main() {
     result |= test_exchange_identification_frame_functions();
     result |= test_test_frame_functions();
     result |= test_ax25_connection();
-    result |=  test_hdlc();
+    result |= test_hdlc();
+    result |= test_ax25_modulo128();
 
     printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
     return result;
