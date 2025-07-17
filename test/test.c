@@ -24,32 +24,6 @@
  *
  */
 
-/*
- * Copyright 2025 Emiliano Augusto Gonzalez (egonzalez . hiperion @ gmail . com))
- * * Project Site: https://github.com/hiperiondev/ax25 *
- *
- * This is based on other projects:
- *    Asynchronous AX.25 library using asyncio: https://github.com/sjlongland/aioax25/
- *
- *    please contact their authors for more information.
- *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,17 +31,17 @@
 
 #include "ax25.h"
 #include "hdlc.h"
+#include "utils.h"
 
-uint8_t err = 0;
-uint8_t assert_count = 0;
+uint32_t assert_count = 0;
 
 #define TEST_ASSERT(condition, message, err) \
     do { \
         if (!(condition)) { \
-            printf("\033[0;31m[%03d] FAIL(%u): %s\033[0m\n", ++assert_count, err, message); \
+            printf("\033[0;31m[%04d] FAIL(%u): %s\033[0m\n", ++assert_count, err, message); \
             return 1; \
         } else { \
-            printf("\033[0;32m[%03d]    PASS: %s\033[0m\n", ++assert_count, message); \
+            printf("\033[0;32m[%04d]    PASS: %s\033[0m\n", ++assert_count, message); \
         } \
     } while (0)
 
@@ -75,14 +49,14 @@ uint8_t assert_count = 0;
     do { \
         int cmp = memcmp(encoded, expected, (encoded_len < expected_len) ? encoded_len : expected_len); \
         if (cmp != 0 || encoded_len != expected_len) { \
-            printf("\033[0;31m[%03d] FAIL: %s\nExpected (%zu bytes): ", ++assert_count, msg, expected_len); \
+            printf("\033[0;31m[%04d] FAIL: %s\nExpected (%zu bytes): ", ++assert_count, msg, expected_len); \
             for (size_t i = 0; i < expected_len; i++) printf("%02X ", expected[i]); \
             printf("\nGot (%zu bytes): ", encoded_len); \
             for (size_t i = 0; i < encoded_len; i++) printf("%02X ", encoded[i]); \
             printf("\033[0m\n"); \
             TEST_ASSERT(false, msg, cmp); \
         } else { \
-            printf("\033[0;32m[%03d]    PASS: %s\033[0m\n", ++assert_count, msg); \
+            printf("\033[0;32m[%04d]    PASS: %s\033[0m\n", ++assert_count, msg); \
         } \
     } while (0)
 
@@ -93,6 +67,8 @@ uint8_t assert_count = 0;
     printf("\n")
 
 int test_address_functions() {
+    uint8_t err = 0;
+
     // Test ax25_address_from_string with "NOCALL-7*"
     ax25_address_t *addr = ax25_address_from_string("NOCALL-7*", &err);
     TEST_ASSERT(addr != NULL, "  ax25_address_from_string should return non-NULL", err);
@@ -169,6 +145,8 @@ int test_address_functions() {
 }
 
 int test_path_functions() {
+    uint8_t err = 0;
+
     // Create addresses for path
     ax25_address_t *addr1 = ax25_address_from_string("NOCALL-0", &err);
     ax25_address_t *addr2 = ax25_address_from_string("REPEATER-1*", &err);
@@ -191,6 +169,8 @@ int test_path_functions() {
 }
 
 int test_modulo128_source_address() {
+    uint8_t err = 0;
+
     // Create addresses
     ax25_address_t dest = { .callsign = "NOCALL", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
     ax25_address_t src = { .callsign = "REPEAT", .ssid = 1, .ch = false, .res0 = true, .res1 = true, .extension = true };
@@ -213,11 +193,11 @@ int test_modulo128_source_address() {
     i_frame.ns = 5;
     i_frame.pid = 0xF0;
     i_frame.payload_len = 4;
-    i_frame.payload = (uint8_t*)"TEST";
+    i_frame.payload = (uint8_t*) "TEST";
 
     // Encode the frame
     size_t len;
-    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*)&i_frame, &len, &err);
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*) &i_frame, &len, &err);
     TEST_ASSERT(encoded != NULL, "Frame encoding should succeed", err);
     if (encoded) {
         // Source address is bytes 7 to 13
@@ -231,6 +211,8 @@ int test_modulo128_source_address() {
 }
 
 int test_modulo8_source_address() {
+    uint8_t err = 0;
+
     // Create addresses
     ax25_address_t dest = { .callsign = "NOCALL", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
     ax25_address_t src = { .callsign = "REPEAT", .ssid = 1, .ch = false, .res0 = true, .res1 = true, .extension = true };
@@ -252,11 +234,11 @@ int test_modulo8_source_address() {
     i_frame.ns = 5;
     i_frame.pid = 0xF0;
     i_frame.payload_len = 4;
-    i_frame.payload = (uint8_t*)"TEST";
+    i_frame.payload = (uint8_t*) "TEST";
 
     // Encode the frame
     size_t len;
-    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*)&i_frame, &len, &err);
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*) &i_frame, &len, &err);
     TEST_ASSERT(encoded != NULL, "Frame encoding should succeed", err);
     if (encoded) {
         // Source address is bytes 7 to 13
@@ -270,6 +252,8 @@ int test_modulo8_source_address() {
 }
 
 int test_frame_header_functions() {
+    uint8_t err = 0;
+
     // Test data: Header with destination "ABCDEF-7" and source "GHIJKL-1*"
     // Dest: 'A'<<1=0x82, 'B'<<1=0x84, 'C'<<1=0x86, 'D'<<1=0x88, 'E'<<1=0x8A, 'F'<<1=0x8C, SSID=7, ch=1, res0=1, res1=1, ext=0: 0xEE
     // Src:  'G'<<1=0x8E, 'H'<<1=0x90, 'I'<<1=0x92, 'J'<<1=0x94, 'K'<<1=0x96, 'L'<<1=0x98, SSID=1, ch=0, res0=1, res1=1, ext=1: 0x63
@@ -308,6 +292,8 @@ int test_frame_header_functions() {
 }
 
 int test_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: UI frame with dest "ABCDEF-7", src "GHIJKL-1*", control=0x03, PID=0xF0, payload="TEST"
     uint8_t frame_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
     ax25_frame_t *frame = ax25_frame_decode(frame_data, sizeof(frame_data), 0, &err);
@@ -335,6 +321,8 @@ int test_frame_functions() {
 }
 
 int test_raw_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: Raw frame with header and payload, control byte set to 0x00 (I-frame)
     uint8_t frame_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x00, 0xF0, 'T', 'E', 'S', 'T' };
     ax25_frame_t *frame = ax25_frame_decode(frame_data, sizeof(frame_data), MODULO128_NONE, &err);
@@ -358,6 +346,8 @@ int test_raw_frame_functions() {
 }
 
 int test_unnumbered_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
     uint8_t header_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 };
     ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
@@ -390,6 +380,8 @@ int test_unnumbered_frame_functions() {
 }
 
 int test_unnumbered_information_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
     uint8_t header_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 };
     ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
@@ -418,44 +410,9 @@ int test_unnumbered_information_frame_functions() {
     return 0;
 }
 
-/*
 int test_frame_reject_frame_functions() {
-    // Test data: Header for "AAAAAA-0" -> "BBBBBB-0"
-    uint8_t header_data[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };
-    ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
-    TEST_ASSERT(header != NULL, "ax25_frame_header_decode should return non-NULL", err);
-    if (header) {
-        // FRMR data: w=1, x=0, y=0, z=0, vr=0, frmr_cr=0, vs=2, frmr_control=0x0A
-        uint8_t frmr_data[] = { 0x01, 0x04, 0x0A };
-        ax25_frame_reject_frame_t *frmr_frame = ax25_frame_reject_frame_decode(header, false, frmr_data, sizeof(frmr_data), &err);
-        TEST_ASSERT(frmr_frame != NULL, "ax25_frame_reject_frame_decode should return non-NULL", err);
-        if (frmr_frame) {
-            TEST_ASSERT(frmr_frame->base.pf == false, "Poll/Final should be false", err);
-            TEST_ASSERT(frmr_frame->base.modifier == 0x87, "Modifier should be 0x87", err);
-            TEST_ASSERT(frmr_frame->w == true, "w should be true", err);
-            TEST_ASSERT(frmr_frame->x == false, "x should be false", err);
-            TEST_ASSERT(frmr_frame->y == false, "y should be false", err);
-            TEST_ASSERT(frmr_frame->z == false, "z should be false", err);
-            TEST_ASSERT(frmr_frame->vr == 0, "vr should be 0", err);
-            TEST_ASSERT(frmr_frame->frmr_cr == false, "frmr_cr should be false", err);
-            TEST_ASSERT(frmr_frame->vs == 2, "vs should be 2", err);
-            TEST_ASSERT(frmr_frame->frmr_control == 0x0A, "frmr_control should be 0x0A", err);
+    uint8_t err = 0;
 
-            size_t len;
-            uint8_t *encoded = ax25_frame_reject_frame_encode(frmr_frame, &len, &err);
-            TEST_ASSERT(encoded != NULL, "ax25_frame_reject_frame_encode should return non-NULL", err);
-            uint8_t expected[] = { 0x87, 0x0A, 0x01, 0x04 };
-            COMPARE_FRAME(encoded, len, expected, sizeof(expected), "Encoded FRMR frame should match");
-            free(encoded);
-            ax25_frame_free((ax25_frame_t*) frmr_frame, &err);
-        }
-        ax25_frame_header_free(header, &err);
-    }
-    return 0;
-}
-*/
-
-int test_frame_reject_frame_functions() {
     // Test data: Header for "AAAAAA-0" -> "BBBBBB-0"
     uint8_t header_data[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };
     ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
@@ -491,6 +448,8 @@ int test_frame_reject_frame_functions() {
 }
 
 int test_information_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
     uint8_t header_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 };
     ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
@@ -523,6 +482,8 @@ int test_information_frame_functions() {
 }
 
 int test_supervisory_frame_functions() {
+    uint8_t err = 0;
+
     ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
             14, &err).header;
     TEST_ASSERT(header != NULL, "ax25_frame_header_decode should return non-NULL", err);
@@ -552,6 +513,8 @@ int test_supervisory_frame_functions() {
 }
 
 int test_xid_parameter_functions() {
+    uint8_t err = 0;
+
     uint8_t pv[] = { 0x01, 0x02 };
     ax25_xid_parameter_t *param = ax25_xid_raw_parameter_new(1, pv, 2, &err);
     TEST_ASSERT(param != NULL, "ax25_xid_raw_parameter_new should return non-NULL", err);
@@ -603,11 +566,13 @@ int test_xid_parameter_functions() {
 
     ax25_xid_init_defaults(&err); // No return value to check
     ax25_xid_deinit_defaults(&err);
-    printf("\033[0;32m[%03d]    PASS: ax25_xid_init_defaults executed\033[0m\n", ++assert_count);
+    printf("\033[0;32m[%04d]    PASS: ax25_xid_init_defaults executed\033[0m\n", ++assert_count);
     return 0;
 }
 
 int test_exchange_identification_frame_functions() {
+    uint8_t err = 0;
+
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
     uint8_t header_data[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 };
     ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
@@ -644,6 +609,8 @@ int test_exchange_identification_frame_functions() {
 }
 
 int test_test_frame_functions() {
+    uint8_t err = 0;
+
     ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
             14, &err).header;
     TEST_ASSERT(header != NULL, "ax25_frame_header_decode should return non-NULL", err);
@@ -674,7 +641,7 @@ int test_test_frame_functions() {
 }
 
 int test_ax25_modulo128(void) {
-    uint8_t err;
+    uint8_t err = 0;
     ax25_frame_t *frame;
 
     // Modulo-128 RR frame: N(R)=4, P/F=0
@@ -700,6 +667,8 @@ int test_ax25_modulo128(void) {
 }
 
 int test_ax25_modulo128_encode() {
+    uint8_t err = 0;
+
     // Create addresses
     ax25_address_t *dest = ax25_address_from_string("NOCALL-0", &err);
     TEST_ASSERT(dest != NULL, "Destination address creation should succeed", err);
@@ -767,6 +736,8 @@ int test_ax25_modulo128_encode() {
 }
 
 int test_ax25_connection(void) {
+    uint8_t err = 0;
+
     // AX.25 Connection Test Packets
     // 1. CONNECT Request (Station A -> Station B: SABM)
     // Dest: VA3BBB-7 (C=1, ext=0), Src: VA3AAA-1 (C=0, ext=1), Control: 0x3F (SABM, P=1)
@@ -939,11 +910,11 @@ int test_ax25_connection(void) {
 }
 
 int test_frmr_frame_functions() {
-    uint8_t err;
+    uint8_t err = 0;
 
     // Define the modulo-8 FRMR frame components
     uint8_t header_mod8[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, // Dest: ABCDEF-7
-                              0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 }; // Src: GHIJKL-1, res1=1
+            0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 }; // Src: GHIJKL-1, res1=1
     uint8_t control_byte = 0x87; // FRMR control byte
     uint8_t frmr_data_mod8[] = { 0x10, 0x24, 0x01 }; // FRMR data
 
@@ -967,17 +938,11 @@ int test_frmr_frame_functions() {
     }
 
     // Verify the decoded FRMR frame
-    ax25_frame_reject_frame_t *frmr = (ax25_frame_reject_frame_t *)frame;
+    ax25_frame_reject_frame_t *frmr = (ax25_frame_reject_frame_t*) frame;
 
     // Assertions
-    if (frmr->base.base.type != AX25_FRAME_UNNUMBERED_FRMR ||
-        frmr->is_modulo128 ||
-        frmr->frmr_control != 0x10 ||
-        frmr->vr != 1 ||
-        frmr->vs != 2 ||
-        frmr->frmr_cr ||
-        !frmr->w ||
-        frmr->x || frmr->y || frmr->z) {
+    if (frmr->base.base.type != AX25_FRAME_UNNUMBERED_FRMR || frmr->is_modulo128 || frmr->frmr_control != 0x10 || frmr->vr != 1 || frmr->vs != 2
+            || frmr->frmr_cr || !frmr->w || frmr->x || frmr->y || frmr->z) {
         printf("Test failed: Expected control=0x10, vr=1, vs=2, cr=0, w=1, x=0, y=0, z=0\n");
         ax25_frame_free(frame, &err);
         free(frame_mod8);
@@ -992,20 +957,19 @@ int test_frmr_frame_functions() {
 }
 
 int test_auto_modulo_detection() {
-    uint8_t err;
+    uint8_t err = 0;
 
     // Test modulo-8 I-frame
-    uint8_t frame_mod8[] = {
-        0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
-        0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63,  // src: GHIJKL-1, ch=0, res1=1 (0x63)
-        0x00,  // control: I-frame, nr=0, ns=0, pf=0
-        0xF0, 'T', 'E', 'S', 'T'  // PID and payload
-    };
+    uint8_t frame_mod8[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
+            0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63,  // src: GHIJKL-1, ch=0, res1=1 (0x63)
+            0x00,  // control: I-frame, nr=0, ns=0, pf=0
+            0xF0, 'T', 'E', 'S', 'T'  // PID and payload
+            };
     ax25_frame_t *frame = ax25_frame_decode(frame_mod8, sizeof(frame_mod8), MODULO128_AUTO, &err);
     TEST_ASSERT(frame != NULL, "Decoding modulo-8 I-frame with auto detection", err);
     if (frame) {
         TEST_ASSERT(frame->type == AX25_FRAME_INFORMATION_8BIT, "Should decode as 8-bit I-frame", err);
-        ax25_information_frame_t *i_frame = (ax25_information_frame_t*)frame;
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*) frame;
         TEST_ASSERT(i_frame->nr == 0, "nr should be 0", err);
         TEST_ASSERT(i_frame->ns == 0, "ns should be 0", err);
         TEST_ASSERT(i_frame->pf == false, "pf should be false", err);
@@ -1013,17 +977,16 @@ int test_auto_modulo_detection() {
     }
 
     // Test modulo-128 I-frame
-    uint8_t frame_mod128[] = {
-        0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
-        0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x23,  // src: GHIJKL-1, ch=0, res1=0 (0x23)
-        0x00, 0x00,  // control: 16-bit, nr=0, ns=0, pf=0
-        0xF0, 'T', 'E', 'S', 'T'  // PID and payload
-    };
+    uint8_t frame_mod128[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
+            0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x23,  // src: GHIJKL-1, ch=0, res1=0 (0x23)
+            0x00, 0x00,  // control: 16-bit, nr=0, ns=0, pf=0
+            0xF0, 'T', 'E', 'S', 'T'  // PID and payload
+            };
     frame = ax25_frame_decode(frame_mod128, sizeof(frame_mod128), MODULO128_AUTO, &err);
     TEST_ASSERT(frame != NULL, "Decoding modulo-128 I-frame with auto detection", err);
     if (frame) {
         TEST_ASSERT(frame->type == AX25_FRAME_INFORMATION_16BIT, "Should decode as 16-bit I-frame", err);
-        ax25_information_frame_t *i_frame = (ax25_information_frame_t*)frame;
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*) frame;
         TEST_ASSERT(i_frame->nr == 0, "nr should be 0", err);
         TEST_ASSERT(i_frame->ns == 0, "ns should be 0", err);
         TEST_ASSERT(i_frame->pf == false, "pf should be false", err);
@@ -1034,6 +997,8 @@ int test_auto_modulo_detection() {
 }
 
 int test_hdlc() {
+    uint8_t err = 0;
+
     // Test Case 1: Valid UI frame
     {
         uint8_t ax25_ui_frame[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
@@ -1238,11 +1203,101 @@ int test_hdlc() {
     return 0;
 }
 
+int test_segmentation_reassembly() {
+    uint8_t err = 0;
+    int result = 0; // Track test result
+
+    // Create a large payload (10000 bytes)
+    size_t payload_len = 10000;
+    uint8_t *payload = malloc(payload_len);
+    if (!payload) {
+        printf("\033[0;31m[%04d] FAIL(%u): Payload allocation should succeed\033[0m\n", ++assert_count, err);
+        return 1;
+    }
+    for (size_t i = 0; i < payload_len; i++) {
+        payload[i] = (uint8_t) (i % 256); // Fill with 0x00, 0x01, ..., 0xFF, 0x00, ...
+    }
+
+    // Segment the payload with N1=256
+    size_t n1 = 256;
+    size_t num_segments;
+    ax25_segmented_info_t *segments = ax25_segment_info_fields(payload, payload_len, n1, &err, &num_segments);
+    if (!segments || err != 0) {
+        result = 1;
+        goto cleanup_payload;
+    }
+
+    // Check segment count
+    if (num_segments != 40) {
+        result = 1;
+        goto cleanup_segments;
+    }
+
+    // Verify first segment
+    if (segments[0].info_field_len != 256 || segments[0].info_field[0] != 0x08 || segments[0].info_field[1] != 0x80 || segments[0].info_field[2] != 0x27
+            || segments[0].info_field[3] != 0x10 || memcmp(segments[0].info_field + 4, payload, 252) != 0) {
+        result = 1;
+        goto cleanup_segments;
+    }
+
+    // Verify second segment
+    if (segments[1].info_field_len != 256 || segments[1].info_field[0] != 0x08 || segments[1].info_field[1] != 0x01
+            || memcmp(segments[1].info_field + 2, payload + 252, 254) != 0) {
+        result = 1;
+        goto cleanup_segments;
+    }
+
+    // Verify last segment
+    size_t last_seg = num_segments - 1;
+    size_t last_data_len = payload_len - 252 - (num_segments - 2) * 254; // 96 bytes
+    size_t last_info_len = 2 + last_data_len; // 98 bytes
+    size_t offset = 252 + (last_seg - 1) * 254;
+    if (segments[last_seg].info_field_len != last_info_len || segments[last_seg].info_field[0] != 0x08 || segments[last_seg].info_field[1] != 0x67
+            || memcmp(segments[last_seg].info_field + 2, payload + offset, last_data_len) != 0) {
+        result = 1;
+        goto cleanup_segments;
+    }
+
+    // Calculate overhead
+    size_t total_segment_bytes = 0;
+    for (size_t i = 0; i < num_segments; i++) {
+        total_segment_bytes += segments[i].info_field_len;
+    }
+    double overhead = (double) (total_segment_bytes - payload_len) / payload_len * 100;
+    if (overhead >= 1.0) {
+        result = 1;
+        goto cleanup_segments;
+    }
+
+    // Reassemble segments
+    size_t reassembled_len;
+    uint8_t *reassembled = ax25_reassemble_info_fields(segments, num_segments, &reassembled_len, &err);
+    if (!reassembled || err != 0 || reassembled_len != payload_len || memcmp(reassembled, payload, payload_len) != 0) {
+        result = 1;
+        free(reassembled);
+        goto cleanup_segments;
+    }
+
+    free(reassembled);  // Free the reassembled buffer after use
+
+    // Print final result only
+    printf("\033[0;32m[%04d]    PASS: test_segmentation_reassembly completed successfully\033[0m\n", ++assert_count);
+
+    cleanup_segments:
+    ax25_free_segmented_info(segments, num_segments);
+    cleanup_payload:
+    free(payload);
+    if (result != 0) {
+        printf("\033[0;31m[%04d] FAIL(%u): test_segmentation_reassembly failed\033[0m\n", ++assert_count, err);
+    }
+    return result;
+}
+
 int main() {
     int result = 0;
-
+    printf("\n----------------------------------------------------------------------------------\n");
     printf("Starting AX.25 Library Tests\n");
-
+    printf("----------------------------------------------------------------------------------\n\n");
     result |= test_address_functions();
     result |= test_path_functions();
     result |= test_frame_header_functions();
@@ -1261,7 +1316,9 @@ int main() {
     result |= test_ax25_modulo128();
     result |= test_frmr_frame_functions();
     result |= test_auto_modulo_detection();
+    result |= test_segmentation_reassembly();
 
-    printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
+    printf("\nTests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
+    printf("----------------------------------------------------------------------------------\n\n");
     return result;
 }

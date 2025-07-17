@@ -49,6 +49,13 @@ ax25_xid_parameter_t *AX25_22_DEFAULT_XID_ACKTIMER = NULL;
 ax25_xid_parameter_t *AX25_20_DEFAULT_XID_RETRIES = NULL;
 ax25_xid_parameter_t *AX25_22_DEFAULT_XID_RETRIES = NULL;
 
+// Comparison function for sorting segments
+static int compare_segments(const void *a, const void *b) {
+    const ax25_reassembly_segment_t *seg_a = (const ax25_reassembly_segment_t*) a;
+    const ax25_reassembly_segment_t *seg_b = (const ax25_reassembly_segment_t*) b;
+    return seg_a->segment_number - seg_b->segment_number;
+}
+
 static uint8_t* uint_encode(uint32_t value, bool big_endian, size_t length, size_t *out_len, uint8_t *err) {
     *err = 0;
 
@@ -412,12 +419,9 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
     *err = 0;
 
     // Determine if it's a modulo-128 frame
-    bool is_modulo128 = (frame->type == AX25_FRAME_INFORMATION_16BIT ||
-                         frame->type == AX25_FRAME_SUPERVISORY_RR_16BIT ||
-                         frame->type == AX25_FRAME_SUPERVISORY_RNR_16BIT ||
-                         frame->type == AX25_FRAME_SUPERVISORY_REJ_16BIT ||
-                         frame->type == AX25_FRAME_SUPERVISORY_SREJ_16BIT ||
-                         frame->type == AX25_FRAME_UNNUMBERED_SABME);
+    bool is_modulo128 = (frame->type == AX25_FRAME_INFORMATION_16BIT || frame->type == AX25_FRAME_SUPERVISORY_RR_16BIT
+            || frame->type == AX25_FRAME_SUPERVISORY_RNR_16BIT || frame->type == AX25_FRAME_SUPERVISORY_REJ_16BIT
+            || frame->type == AX25_FRAME_SUPERVISORY_SREJ_16BIT || frame->type == AX25_FRAME_UNNUMBERED_SABME);
 
     // Create a copy of the header
     ax25_frame_header_t header_copy = frame->header;
@@ -437,30 +441,30 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
     switch (frame->type) {
         case AX25_FRAME_RAW:
             payload_bytes = ax25_raw_frame_encode((ax25_raw_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_UNNUMBERED_INFORMATION:
             payload_bytes = ax25_unnumbered_information_frame_encode((ax25_unnumbered_information_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_UNNUMBERED_SABM:
         case AX25_FRAME_UNNUMBERED_SABME:
         case AX25_FRAME_UNNUMBERED_DISC:
         case AX25_FRAME_UNNUMBERED_DM:
         case AX25_FRAME_UNNUMBERED_UA:
             payload_bytes = ax25_unnumbered_frame_encode((ax25_unnumbered_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_UNNUMBERED_FRMR:
             payload_bytes = ax25_frame_reject_frame_encode((ax25_frame_reject_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_UNNUMBERED_XID:
             payload_bytes = ax25_exchange_identification_frame_encode((ax25_exchange_identification_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_UNNUMBERED_TEST:
             payload_bytes = ax25_test_frame_encode((ax25_test_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_INFORMATION_8BIT:
         case AX25_FRAME_INFORMATION_16BIT:
             payload_bytes = ax25_information_frame_encode((ax25_information_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         case AX25_FRAME_SUPERVISORY_RR_8BIT:
         case AX25_FRAME_SUPERVISORY_RNR_8BIT:
         case AX25_FRAME_SUPERVISORY_REJ_8BIT:
@@ -470,7 +474,7 @@ uint8_t* ax25_frame_encode(const ax25_frame_t *frame, size_t *len, uint8_t *err)
         case AX25_FRAME_SUPERVISORY_REJ_16BIT:
         case AX25_FRAME_SUPERVISORY_SREJ_16BIT:
             payload_bytes = ax25_supervisory_frame_encode((ax25_supervisory_frame_t*) frame, &payload_len, err);
-            break;
+        break;
         default:
             *err = 2;
             free(header_bytes);
@@ -747,15 +751,12 @@ uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, 
         bytes[2] = (frame->frmr_control >> 8) & 0xFF;         // Control high byte
         bytes[3] = ((frame->vs & 0x7F) << 1) | (frame->frmr_cr ? 0x01 : 0); // N(s) and CR
         bytes[4] = (frame->vr & 0x7F) << 1;                   // N(r)
-        bytes[5] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) |
-                   (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
+        bytes[5] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
     } else {
         // Encode 3-byte data field
         bytes[1] = frame->frmr_control & 0xFF;                // Control byte
-        bytes[2] = ((frame->vr & 0x07) << 5) | (frame->frmr_cr ? 0x10 : 0) |
-                   ((frame->vs & 0x07) << 1);                 // V(r), CR, V(s)
-        bytes[3] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) |
-                   (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
+        bytes[2] = ((frame->vr & 0x07) << 5) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vs & 0x07) << 1);                 // V(r), CR, V(s)
+        bytes[3] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
     }
 
     return bytes;
@@ -1251,4 +1252,173 @@ void ax25_xid_deinit_defaults(uint8_t *err) {
     FREE_XID_PARAM(AX25_22_DEFAULT_XID_RETRIES);
 
 #undef FREE_XID_PARAM
+}
+
+ax25_segmented_info_t* ax25_segment_info_fields(const uint8_t *payload, size_t payload_len, size_t n1, uint8_t *err, size_t *num_segments) {
+    *err = 0;
+    if (n1 < 4) { // Minimum for first segment: PID + control + total_length
+        *err = 1;
+        return NULL;
+    }
+    size_t max_first_data = n1 - 4; // PID + control + total_length
+    size_t max_other_data = n1 - 2; // PID + control
+    if (max_first_data == 0 || max_other_data == 0) {
+        *err = 2;
+        return NULL;
+    }
+
+    ax25_segmented_info_t *segments = NULL;
+    size_t offset = 0;
+    size_t segment_number = 0;
+
+    while (offset < payload_len) {
+        size_t max_data = (segment_number == 0) ? max_first_data : max_other_data;
+        size_t data_len = (payload_len - offset > max_data) ? max_data : payload_len - offset;
+        size_t info_field_len = 1 + 1 + (segment_number == 0 ? 2 : 0) + data_len; // PID + control + total_length if first + data
+        uint8_t *info_field = malloc(info_field_len);
+        if (!info_field) {
+            *err = 3;
+            for (size_t i = 0; i < segment_number; i++) {
+                free(segments[i].info_field);
+            }
+            free(segments);
+            return NULL;
+        }
+        info_field[0] = 0x08; // PID
+        uint8_t control = segment_number & 0x3F; // Segment number in bits 5-0
+        if (segment_number == 0) {
+            control |= 0x80; // Begin flag
+        }
+        if (offset + data_len == payload_len) {
+            control |= 0x40; // End flag
+        }
+        info_field[1] = control;
+        size_t pos = 2;
+        if (segment_number == 0) {
+            info_field[pos++] = (payload_len >> 8) & 0xFF;
+            info_field[pos++] = payload_len & 0xFF;
+        }
+        memcpy(info_field + pos, payload + offset, data_len);
+        ax25_segmented_info_t segment = { info_field, info_field_len };
+        ax25_segmented_info_t *new_segments = realloc(segments, (segment_number + 1) * sizeof(ax25_segmented_info_t));
+        if (!new_segments) {
+            *err = 4;
+            free(info_field);
+            for (size_t i = 0; i < segment_number; i++) {
+                free(segments[i].info_field);
+            }
+            free(segments);
+            return NULL;
+        }
+        segments = new_segments;
+        segments[segment_number] = segment;
+        offset += data_len;
+        segment_number++;
+    }
+    *num_segments = segment_number;
+    return segments;
+}
+
+uint8_t* ax25_reassemble_info_fields(ax25_segmented_info_t *info_fields, size_t num_info_fields, size_t *reassembled_len, uint8_t *err) {
+    *err = 0;
+    if (num_info_fields == 0) {
+        *reassembled_len = 0;
+        return NULL;
+    }
+
+    ax25_reassembly_segment_t *segments = malloc(num_info_fields * sizeof(ax25_reassembly_segment_t));
+    if (!segments) {
+        *err = 1;
+        return NULL;
+    }
+
+    size_t total_length = 0;
+    bool has_first = false;
+    for (size_t i = 0; i < num_info_fields; i++) {
+        uint8_t *info = info_fields[i].info_field;
+        size_t len = info_fields[i].info_field_len;
+        if (len < 2 || info[0] != 0x08) {
+            *err = 2;
+            free(segments);
+            return NULL;
+        }
+        uint8_t control = info[1];
+        bool begin = (control & 0x80) != 0;
+        int segment_number = (control & 0x3F);
+        size_t offset = 2;
+        if (begin) {
+            if (len < 4) {
+                *err = 3;
+                free(segments);
+                return NULL;
+            }
+            total_length = (info[2] << 8) | info[3];
+            offset = 4;
+        }
+        size_t data_len = len - offset;
+        segments[i].control = control;
+        segments[i].total_length = total_length;
+        segments[i].data = info + offset;
+        segments[i].data_len = data_len;
+        segments[i].segment_number = segment_number;
+        if (begin)
+            has_first = true;
+    }
+
+    if (!has_first) {
+        *err = 4;
+        free(segments);
+        return NULL;
+    }
+
+    // Sort segments by segment_number
+    qsort(segments, num_info_fields, sizeof(ax25_reassembly_segment_t), compare_segments);
+
+    // Check for duplicates or missing segments
+    int expected_segments = -1;
+    for (size_t i = 0; i < num_info_fields; i++) {
+        if (segments[i].segment_number != (int) i) {
+            *err = 5;
+            free(segments);
+            return NULL;
+        }
+        if ((segments[i].control & 0x40) != 0) { // End flag
+            expected_segments = i + 1;
+        }
+    }
+    if (expected_segments == -1 || expected_segments != (int) num_info_fields) {
+        *err = 6;
+        free(segments);
+        return NULL;
+    }
+
+    // Reassemble
+    uint8_t *reassembled = malloc(total_length);
+    if (!reassembled) {
+        *err = 7;
+        free(segments);
+        return NULL;
+    }
+    size_t offset = 0;
+    for (size_t i = 0; i < num_info_fields; i++) {
+        memcpy(reassembled + offset, segments[i].data, segments[i].data_len);
+        offset += segments[i].data_len;
+    }
+    if (offset != total_length) {
+        *err = 8;
+        free(reassembled);
+        free(segments);
+        return NULL;
+    }
+
+    *reassembled_len = total_length;
+    free(segments);
+    return reassembled;
+}
+
+void ax25_free_segmented_info(ax25_segmented_info_t *segments, size_t num_segments) {
+    for (size_t i = 0; i < num_segments; i++) {
+        free(segments[i].info_field);
+    }
+    free(segments);
 }

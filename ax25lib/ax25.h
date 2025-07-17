@@ -202,6 +202,21 @@ typedef enum {
     AX25_FRAME_SUPERVISORY_SREJ_16BIT
 } ax25_frame_type_t;
 
+// Structure to hold segmented info fields
+typedef struct {
+    uint8_t *info_field;
+    size_t info_field_len;
+} ax25_segmented_info_t;
+
+// Internal structure for reassembly
+typedef struct {
+    uint8_t control;
+    uint16_t total_length;
+    uint8_t *data;
+    size_t data_len;
+    int segment_number;
+} ax25_reassembly_segment_t;
+
 typedef struct {
     char callsign[CALLSIGN_MAX];
     int ssid;
@@ -858,5 +873,14 @@ ax25_xid_parameter_t* ax25_xid_big_endian_new(int pi, uint32_t value, size_t len
 void ax25_xid_init_defaults(uint8_t *err);
 
 void ax25_xid_deinit_defaults(uint8_t *err);
+
+// Function to segment a payload into info fields for AX.25 frames
+ax25_segmented_info_t* ax25_segment_info_fields(const uint8_t *payload, size_t payload_len, size_t n1, uint8_t *err, size_t *num_segments);
+
+// Function to reassemble the original payload from segmented info fields
+uint8_t* ax25_reassemble_info_fields(ax25_segmented_info_t *info_fields, size_t num_info_fields, size_t *reassembled_len, uint8_t *err);
+
+// Function to free the memory allocated for segmented info fields
+void ax25_free_segmented_info(ax25_segmented_info_t *segments, size_t num_segments);
 
 #endif /* AX25_H_ */
