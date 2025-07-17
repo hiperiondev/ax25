@@ -93,8 +93,8 @@ ax25_address_t* ax25_address_decode(const uint8_t *data, uint8_t *err) {
     addr->callsign[6] = '\0';
     addr->ssid = (data[6] & 0x1E) >> 1;
     addr->ch = (data[6] & 0x80) != 0;
-    addr->res0 = (data[6] & 0x40) != 0;
-    addr->res1 = (data[6] & 0x20) != 0;
+    addr->res1 = (data[6] & 0x40) != 0;  // res1 is bit 6
+    addr->res0 = (data[6] & 0x20) != 0;  // res0 is bit 5
     addr->extension = (data[6] & 0x01) != 0;
 
     return addr;
@@ -375,7 +375,13 @@ ax25_frame_t* ax25_frame_decode(const uint8_t *data, size_t len, int modulo128, 
             memcpy(raw->payload, hdr_result.remaining + 1, raw->payload_len);
             frame = (ax25_frame_t*) raw;
         } else {
-            bool is_16bit = (modulo128 == MODULO128_TRUE);
+            bool is_16bit;
+            if (modulo128 == MODULO128_AUTO) {
+                // Automatic detection based on source address res1 bit
+                is_16bit = !hdr_result.header->source.res1;
+            } else {
+                is_16bit = (modulo128 == MODULO128_TRUE);
+            }
             size_t control_size = is_16bit ? 2 : 1;
             if (hdr_result.remaining_len < control_size) {
                 *err = 6;
@@ -668,48 +674,89 @@ uint8_t* ax25_unnumbered_information_frame_encode(const ax25_unnumbered_informat
 ax25_frame_reject_frame_t* ax25_frame_reject_frame_decode(ax25_frame_header_t *header, bool pf, const uint8_t *data, size_t len, uint8_t *err) {
     *err = 0;
 
-    if (len != 3) {
-        *err = 1;
+    // Determine modulo type from source address res1 bit (0 = modulo-128)
+    bool is_modulo128 = !header->source.res1;
+
+    // Check expected data length
+    size_t expected_len = is_modulo128 ? 5 : 3;
+    if (len != expected_len) {
+        *err = 1; // Invalid length
         return NULL;
     }
 
+    // Allocate frame structure
     ax25_frame_reject_frame_t *frame = malloc(sizeof(ax25_frame_reject_frame_t));
-
     if (!frame) {
-        *err = 2;
+        *err = 2; // Memory allocation failed
         return NULL;
     }
 
+    // Initialize base fields
     frame->base.base.type = AX25_FRAME_UNNUMBERED_FRMR;
     frame->base.base.header = *header;
     frame->base.pf = pf;
-    frame->base.modifier = 0x87;
-    frame->w = (data[0] & 0x01) != 0;
-    frame->x = (data[0] & 0x02) != 0;
-    frame->y = (data[0] & 0x04) != 0;
-    frame->z = (data[0] & 0x08) != 0;
-    frame->vr = (data[1] & 0xE0) >> 5;
-    frame->frmr_cr = (data[1] & 0x10) != 0;
-    frame->vs = (data[1] & 0x0E) >> 1;
-    frame->frmr_control = data[2];
+    frame->base.modifier = 0x87; // FRMR control byte
+    frame->is_modulo128 = is_modulo128;
+
+    if (is_modulo128) {
+        // Parse 5-byte data field
+        frame->frmr_control = data[0] | (data[1] << 8);        // 16-bit control field
+        frame->vs = (data[2] >> 1) & 0x7F;                     // N(s): 7 bits
+        frame->frmr_cr = data[2] & 0x01;                       // CR: 1 bit
+        frame->vr = (data[3] >> 1) & 0x7F;                     // N(r): 7 bits
+        uint8_t flags = data[4];
+        frame->w = (flags & 0x01) != 0;
+        frame->x = (flags & 0x02) != 0;
+        frame->y = (flags & 0x04) != 0;
+        frame->z = (flags & 0x08) != 0;
+    } else {
+        // Parse 3-byte data field
+        frame->frmr_control = data[0];                         // 8-bit control field
+        uint8_t vr_cr_vs = data[1];
+        frame->vr = (vr_cr_vs >> 5) & 0x07;                    // V(r): 3 bits
+        frame->frmr_cr = (vr_cr_vs & 0x10) != 0;               // CR: 1 bit
+        frame->vs = (vr_cr_vs >> 1) & 0x07;                    // V(s): 3 bits
+        uint8_t flags = data[2];
+        frame->w = (flags & 0x01) != 0;
+        frame->x = (flags & 0x02) != 0;
+        frame->y = (flags & 0x04) != 0;
+        frame->z = (flags & 0x08) != 0;
+    }
 
     return frame;
 }
 
 uint8_t* ax25_frame_reject_frame_encode(const ax25_frame_reject_frame_t *frame, size_t *len, uint8_t *err) {
     *err = 0;
-    *len = 4;
-    uint8_t *bytes = malloc(*len);
+    bool is_modulo128 = frame->is_modulo128;
 
+    // Total length: 1 control byte + data field (3 or 5 bytes)
+    *len = is_modulo128 ? 6 : 4;
+    uint8_t *bytes = malloc(*len);
     if (!bytes) {
-        *err = 1;
+        *err = 1; // Memory allocation failed
         return NULL;
     }
 
+    // Encode control byte
     bytes[0] = frame->base.modifier | (frame->base.pf ? POLL_FINAL_8BIT : 0);
-    bytes[1] = frame->frmr_control;
-    bytes[2] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) | (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);
-    bytes[3] = ((frame->vr << 5) & 0xE0) | (frame->frmr_cr ? 0x10 : 0) | ((frame->vs << 1) & 0x0E);
+
+    if (is_modulo128) {
+        // Encode 5-byte data field
+        bytes[1] = frame->frmr_control & 0xFF;                // Control low byte
+        bytes[2] = (frame->frmr_control >> 8) & 0xFF;         // Control high byte
+        bytes[3] = ((frame->vs & 0x7F) << 1) | (frame->frmr_cr ? 0x01 : 0); // N(s) and CR
+        bytes[4] = (frame->vr & 0x7F) << 1;                   // N(r)
+        bytes[5] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) |
+                   (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
+    } else {
+        // Encode 3-byte data field
+        bytes[1] = frame->frmr_control & 0xFF;                // Control byte
+        bytes[2] = ((frame->vr & 0x07) << 5) | (frame->frmr_cr ? 0x10 : 0) |
+                   ((frame->vs & 0x07) << 1);                 // V(r), CR, V(s)
+        bytes[3] = (frame->w ? 0x01 : 0) | (frame->x ? 0x02 : 0) |
+                   (frame->y ? 0x04 : 0) | (frame->z ? 0x08 : 0);     // Flags
+    }
 
     return bytes;
 }

@@ -157,6 +157,7 @@
 #define MODULO128_NONE  -1
 #define MODULO128_FALSE 0
 #define MODULO128_TRUE  1
+#define MODULO128_AUTO 2
 
 #define MAX_REPEATERS 8
 #define CALLSIGN_MAX 7
@@ -249,11 +250,13 @@ typedef struct {
 } ax25_unnumbered_information_frame_t;
 
 typedef struct {
-    ax25_unnumbered_frame_t base;
-    bool w, x, y, z;
-    int vr, vs;
-    bool frmr_cr;
-    uint8_t frmr_control;
+    ax25_unnumbered_frame_t base;    // Base unnumbered frame structure
+    bool is_modulo128;               // True for modulo-128, false for modulo-8
+    uint16_t frmr_control;           // Control field: 8 bits (modulo-8) or 16 bits (modulo-128)
+    int vs;                          // Send sequence number: 3 bits (modulo-8) or 7 bits (modulo-128)
+    int vr;                          // Receive sequence number: 3 bits (modulo-8) or 7 bits (modulo-128)
+    bool frmr_cr;                    // Command/Response flag
+    bool w, x, y, z;                 // Rejection cause flags
 } ax25_frame_reject_frame_t;
 
 typedef struct {

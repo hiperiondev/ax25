@@ -418,6 +418,7 @@ int test_unnumbered_information_frame_functions() {
     return 0;
 }
 
+/*
 int test_frame_reject_frame_functions() {
     // Test data: Header for "AAAAAA-0" -> "BBBBBB-0"
     uint8_t header_data[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };
@@ -444,6 +445,42 @@ int test_frame_reject_frame_functions() {
             uint8_t *encoded = ax25_frame_reject_frame_encode(frmr_frame, &len, &err);
             TEST_ASSERT(encoded != NULL, "ax25_frame_reject_frame_encode should return non-NULL", err);
             uint8_t expected[] = { 0x87, 0x0A, 0x01, 0x04 };
+            COMPARE_FRAME(encoded, len, expected, sizeof(expected), "Encoded FRMR frame should match");
+            free(encoded);
+            ax25_frame_free((ax25_frame_t*) frmr_frame, &err);
+        }
+        ax25_frame_header_free(header, &err);
+    }
+    return 0;
+}
+*/
+
+int test_frame_reject_frame_functions() {
+    // Test data: Header for "AAAAAA-0" -> "BBBBBB-0"
+    uint8_t header_data[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };
+    ax25_frame_header_t *header = ax25_frame_header_decode(header_data, sizeof(header_data), &err).header;
+    TEST_ASSERT(header != NULL, "ax25_frame_header_decode should return non-NULL", err);
+    if (header) {
+        // FRMR data: w=1, x=0, y=0, z=0, vr=0, frmr_cr=0, vs=2, frmr_control=0x0A
+        uint8_t frmr_data[] = { 0x0A, 0x04, 0x01 };
+        ax25_frame_reject_frame_t *frmr_frame = ax25_frame_reject_frame_decode(header, false, frmr_data, sizeof(frmr_data), &err);
+        TEST_ASSERT(frmr_frame != NULL, "ax25_frame_reject_frame_decode should return non-NULL", err);
+        if (frmr_frame) {
+            TEST_ASSERT(frmr_frame->base.pf == false, "Poll/Final should be false", err);
+            TEST_ASSERT(frmr_frame->base.modifier == 0x87, "Modifier should be 0x87", err);
+            TEST_ASSERT(frmr_frame->w == true, "w should be true", err);
+            TEST_ASSERT(frmr_frame->x == false, "x should be false", err);
+            TEST_ASSERT(frmr_frame->y == false, "y should be false", err);
+            TEST_ASSERT(frmr_frame->z == false, "z should be false", err);
+            TEST_ASSERT(frmr_frame->vr == 0, "vr should be 0", err);
+            TEST_ASSERT(frmr_frame->frmr_cr == false, "frmr_cr should be false", err);
+            TEST_ASSERT(frmr_frame->vs == 2, "vs should be 2", err);
+            TEST_ASSERT(frmr_frame->frmr_control == 0x0A, "frmr_control should be 0x0A", err);
+
+            size_t len;
+            uint8_t *encoded = ax25_frame_reject_frame_encode(frmr_frame, &len, &err);
+            TEST_ASSERT(encoded != NULL, "ax25_frame_reject_frame_encode should return non-NULL", err);
+            uint8_t expected[] = { 0x87, 0x0A, 0x04, 0x01 };
             COMPARE_FRAME(encoded, len, expected, sizeof(expected), "Encoded FRMR frame should match");
             free(encoded);
             ax25_frame_free((ax25_frame_t*) frmr_frame, &err);
@@ -901,6 +938,101 @@ int test_ax25_connection(void) {
     return 0;
 }
 
+int test_frmr_frame_functions() {
+    uint8_t err;
+
+    // Define the modulo-8 FRMR frame components
+    uint8_t header_mod8[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, // Dest: ABCDEF-7
+                              0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63 }; // Src: GHIJKL-1, res1=1
+    uint8_t control_byte = 0x87; // FRMR control byte
+    uint8_t frmr_data_mod8[] = { 0x10, 0x24, 0x01 }; // FRMR data
+
+    // Calculate lengths
+    size_t header_len = sizeof(header_mod8);       // 14 bytes
+    size_t frmr_data_len = sizeof(frmr_data_mod8); // 3 bytes
+    size_t total_len = header_len + 1 + frmr_data_len; // Header + control + data
+
+    // Construct the frame
+    uint8_t *frame_mod8 = malloc(total_len);
+    memcpy(frame_mod8, header_mod8, header_len);
+    frame_mod8[header_len] = control_byte;
+    memcpy(frame_mod8 + header_len + 1, frmr_data_mod8, frmr_data_len);
+
+    // Decode the frame
+    ax25_frame_t *frame = ax25_frame_decode(frame_mod8, total_len, 0, &err);
+    if (!frame) {
+        printf("Decoding failed with error %d\n", err);
+        free(frame_mod8);
+        return 1;
+    }
+
+    // Verify the decoded FRMR frame
+    ax25_frame_reject_frame_t *frmr = (ax25_frame_reject_frame_t *)frame;
+
+    // Assertions
+    if (frmr->base.base.type != AX25_FRAME_UNNUMBERED_FRMR ||
+        frmr->is_modulo128 ||
+        frmr->frmr_control != 0x10 ||
+        frmr->vr != 1 ||
+        frmr->vs != 2 ||
+        frmr->frmr_cr ||
+        !frmr->w ||
+        frmr->x || frmr->y || frmr->z) {
+        printf("Test failed: Expected control=0x10, vr=1, vs=2, cr=0, w=1, x=0, y=0, z=0\n");
+        ax25_frame_free(frame, &err);
+        free(frame_mod8);
+        return 1;
+    }
+
+    // Clean up
+    ax25_frame_free(frame, &err);
+    free(frame_mod8);
+
+    return 0; // Success
+}
+
+int test_auto_modulo_detection() {
+    uint8_t err;
+
+    // Test modulo-8 I-frame
+    uint8_t frame_mod8[] = {
+        0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
+        0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63,  // src: GHIJKL-1, ch=0, res1=1 (0x63)
+        0x00,  // control: I-frame, nr=0, ns=0, pf=0
+        0xF0, 'T', 'E', 'S', 'T'  // PID and payload
+    };
+    ax25_frame_t *frame = ax25_frame_decode(frame_mod8, sizeof(frame_mod8), MODULO128_AUTO, &err);
+    TEST_ASSERT(frame != NULL, "Decoding modulo-8 I-frame with auto detection", err);
+    if (frame) {
+        TEST_ASSERT(frame->type == AX25_FRAME_INFORMATION_8BIT, "Should decode as 8-bit I-frame", err);
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*)frame;
+        TEST_ASSERT(i_frame->nr == 0, "nr should be 0", err);
+        TEST_ASSERT(i_frame->ns == 0, "ns should be 0", err);
+        TEST_ASSERT(i_frame->pf == false, "pf should be false", err);
+        ax25_frame_free(frame, &err);
+    }
+
+    // Test modulo-128 I-frame
+    uint8_t frame_mod128[] = {
+        0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE,  // dest: ABCDEF-7, ch=1
+        0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x23,  // src: GHIJKL-1, ch=0, res1=0 (0x23)
+        0x00, 0x00,  // control: 16-bit, nr=0, ns=0, pf=0
+        0xF0, 'T', 'E', 'S', 'T'  // PID and payload
+    };
+    frame = ax25_frame_decode(frame_mod128, sizeof(frame_mod128), MODULO128_AUTO, &err);
+    TEST_ASSERT(frame != NULL, "Decoding modulo-128 I-frame with auto detection", err);
+    if (frame) {
+        TEST_ASSERT(frame->type == AX25_FRAME_INFORMATION_16BIT, "Should decode as 16-bit I-frame", err);
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*)frame;
+        TEST_ASSERT(i_frame->nr == 0, "nr should be 0", err);
+        TEST_ASSERT(i_frame->ns == 0, "ns should be 0", err);
+        TEST_ASSERT(i_frame->pf == false, "pf should be false", err);
+        ax25_frame_free(frame, &err);
+    }
+
+    return 0;
+}
+
 int test_hdlc() {
     // Test Case 1: Valid UI frame
     {
@@ -1107,8 +1239,10 @@ int test_hdlc() {
 }
 
 int main() {
-    printf("Starting AX.25 Library Tests\n");
     int result = 0;
+
+    printf("Starting AX.25 Library Tests\n");
+
     result |= test_address_functions();
     result |= test_path_functions();
     result |= test_frame_header_functions();
@@ -1125,6 +1259,8 @@ int main() {
     result |= test_ax25_connection();
     result |= test_hdlc();
     result |= test_ax25_modulo128();
+    result |= test_frmr_frame_functions();
+    result |= test_auto_modulo_detection();
 
     printf("Tests Completed. %s\n", result == 0 ? "All tests passed" : "Some tests failed");
     return result;
