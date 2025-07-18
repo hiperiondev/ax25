@@ -30,5 +30,5 @@
 #! /bin/bash
 
 clear
-valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose Release/ax25 $1
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose Release/HamRadioLib $1
 rm vgcore#

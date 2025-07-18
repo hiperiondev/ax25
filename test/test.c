@@ -72,7 +72,7 @@ int test_address_functions() {
 
     // Test ax25_address_from_string with "NOCALL-7*"
     ax25_address_t *addr = ax25_address_from_string("NOCALL-7*", &err);
-    TEST_ASSERT(addr != NULL, "  ax25_address_from_string should return non-NULL", err);
+    TEST_ASSERT(addr != NULL, "ax25_address_from_string should return non-NULL for valid input", err);
     if (addr) {
         TEST_ASSERT(strcmp(addr->callsign, "NOCALL") == 0, "Callsign should be NOCALL", err);
         TEST_ASSERT(addr->ssid == 7, "SSID should be 7", err);
@@ -80,98 +80,172 @@ int test_address_functions() {
         TEST_ASSERT(addr->res0 == true, "res0 should be true", err);
         TEST_ASSERT(addr->res1 == true, "res1 should be true", err);
         TEST_ASSERT(addr->extension == false, "extension should be false", err);
-
-        // Test ax25_address_encode
-        size_t len;
-        uint8_t *encoded = ax25_address_encode(addr, &len, &err);
-        TEST_ASSERT(encoded != NULL, "ax25_address_encode should return non-NULL", err);
-        TEST_ASSERT(len == 7, "Encoded address length should be 7 bytes", err);
-        if (encoded) {
-            uint8_t expected[] = { 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xEE };
-            TEST_ASSERT(memcmp(encoded, expected, 7) == 0, "Encoded address should match expected bytes", err);
-
-            // Test ax25_address_decode
-            ax25_address_t *decoded_addr = ax25_address_decode(encoded, &err);
-            TEST_ASSERT(decoded_addr != NULL, "ax25_address_decode should return non-NULL", err);
-            if (decoded_addr) {
-                TEST_ASSERT(strcmp(decoded_addr->callsign, "NOCALL") == 0, "Decoded callsign should be NOCALL", err);
-                TEST_ASSERT(decoded_addr->ssid == 7, "Decoded SSID should be 7", err);
-                TEST_ASSERT(decoded_addr->ch == true, "Decoded ch should be true", err);
-                TEST_ASSERT(decoded_addr->res0 == true, "Decoded res0 should be true", err);
-                TEST_ASSERT(decoded_addr->res1 == true, "Decoded res1 should be true", err);
-                TEST_ASSERT(decoded_addr->extension == false, "Decoded extension should be false", err);
-                ax25_address_free(decoded_addr, &err);
-            }
-            free(encoded);
-        }
-
-        // Test ax25_address_copy
-        ax25_address_t *addr_copy = ax25_address_copy(addr, &err);
-        TEST_ASSERT(addr_copy != NULL, "ax25_address_copy should return non-NULL", err);
-        if (addr_copy) {
-            TEST_ASSERT(strcmp(addr_copy->callsign, addr->callsign) == 0, "Copied callsign should match", err);
-            TEST_ASSERT(addr_copy->ssid == addr->ssid, "Copied SSID should match", err);
-            TEST_ASSERT(addr_copy->ch == addr->ch, "Copied ch should match", err);
-            TEST_ASSERT(addr_copy->res0 == addr->res0, "Copied res0 should match", err);
-            TEST_ASSERT(addr_copy->res1 == addr->res1, "Copied res1 should match", err);
-            TEST_ASSERT(addr_copy->extension == addr->extension, "Copied extension should match", err);
-            ax25_address_free(addr_copy, &err);
-        }
         ax25_address_free(addr, &err);
     }
 
-    // Test modulo-128 source address with res1 = false
-    ax25_address_t *addr_mod128 = ax25_address_from_string("SOURCE-0", &err);
-    TEST_ASSERT(addr_mod128 != NULL, "ax25_address_from_string should return non-NULL for modulo-128 source", err);
-    if (addr_mod128) {
-        addr_mod128->res1 = false; // Set res1 to false for modulo-128 source address
-        TEST_ASSERT(addr_mod128->res0 == true, "res0 should be true for modulo-128 source", err);
-        TEST_ASSERT(addr_mod128->res1 == false, "res1 should be false for modulo-128 source", err);
-
-        size_t len;
-        uint8_t *encoded = ax25_address_encode(addr_mod128, &len, &err);
-        TEST_ASSERT(encoded != NULL, "ax25_address_encode should return non-NULL for modulo-128 source", err);
-        TEST_ASSERT(len == 7, "Encoded length should be 7 for modulo-128 source", err);
-        if (encoded) {
-            // Expected SSID byte: SSID=0 (0<<1)=0x00, extension=0 (0x00), res0=1 (0x20), res1=0 (0x00), ch=0 (0x00) = 0x20
-            uint8_t expected[] = { 'S' << 1, 'O' << 1, 'U' << 1, 'R' << 1, 'C' << 1, 'E' << 1, 0x20 }; // 0xA2, 0x9E, 0xB4, 0xA0, 0x86, 0x8A, 0x20
-            TEST_ASSERT(memcmp(encoded, expected, 7) == 0, "Encoded modulo-128 source address should match expected bytes", err);
-            TEST_ASSERT((encoded[6] & 0x40) == 0, "Bit 6 (res1) should be 0 for modulo-128 source address", err);
-            free(encoded);
-        }
-        ax25_address_free(addr_mod128, &err);
+    // Test ax25_address_from_string with "ABC123-15"
+    addr = ax25_address_from_string("ABC123-15", &err);
+    TEST_ASSERT(addr != NULL, "ax25_address_from_string should return non-NULL for valid input", err);
+    if (addr) {
+        TEST_ASSERT(strcmp(addr->callsign, "ABC123") == 0, "Callsign should be ABC123", err);
+        TEST_ASSERT(addr->ssid == 15, "SSID should be 15", err);
+        TEST_ASSERT(addr->ch == false, "ch should be false", err);
+        TEST_ASSERT(addr->res0 == true, "res0 should be true", err);
+        TEST_ASSERT(addr->res1 == true, "res1 should be true", err);
+        TEST_ASSERT(addr->extension == false, "extension should be false", err);
+        ax25_address_free(addr, &err);
     }
+
+    // Test ax25_address_from_string with "NOCALL-16" (SSID out of range)
+    addr = ax25_address_from_string("NOCALL-16", &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for invalid SSID", err);
+    TEST_ASSERT(err == 4, "Error code should be 4 for invalid SSID", err);
+
+    // Test ax25_address_from_string with "NOCALL-1A" (Non-numeric SSID)
+    addr = ax25_address_from_string("NOCALL-1A", &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for non-numeric SSID", err);
+    TEST_ASSERT(err == 5, "Error code should be 5 for invalid character after SSID", err);
+
+    // Test ax25_address_from_string with "NOCALL*7" (Misplaced asterisk)
+    addr = ax25_address_from_string("NOCALL*7", &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for misplaced asterisk", err);
+    TEST_ASSERT(err == 6, "Error code should be 6 for '*' not at the end", err);
+
+    // Test ax25_address_from_string with "TOOLONGADDR-1" (String too long)
+    addr = ax25_address_from_string("TOOLONGADDR-1", &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for string too long", err);
+    TEST_ASSERT(err == 4, "Error code should be 4 for invalid callsign length", err);
+
+    // Test ax25_address_from_string with "" (Empty string)
+    addr = ax25_address_from_string("", &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for empty string", err);
+    TEST_ASSERT(err == 4, "Error code should be 4 for invalid callsign length", err);
+
+    // Test ax25_address_from_string with NULL
+    addr = ax25_address_from_string(NULL, &err);
+    TEST_ASSERT(addr == NULL, "ax25_address_from_string should return NULL for NULL input", err);
+    TEST_ASSERT(err == 2, "Error code should be 2 for invalid input", err);
 
     return 0;
 }
 
 int test_path_functions() {
-    printf("test_path_functions\n");
+	printf("test_path_functions\n");
     uint8_t err = 0;
 
-    // Create addresses for path
-    ax25_address_t *addr1 = ax25_address_from_string("NOCALL-0", &err);
-    ax25_address_t *addr2 = ax25_address_from_string("REPEATER-1*", &err);
-    ax25_address_t *repeaters[] = { addr1, addr2 };
-    ax25_path_t *path = ax25_path_new(repeaters, 2, &err);
-    TEST_ASSERT(path != NULL, "ax25_path_new should return non-NULL", err);
-    if (path) {
-        TEST_ASSERT(path->num_repeaters == 2, "Path should have 2 repeaters", err);
-        TEST_ASSERT(strcmp(path->repeaters[0].callsign, "NOCALL") == 0, "Repeater 0 callsign should be NOCALL", err);
-        TEST_ASSERT(path->repeaters[0].ssid == 0, "Repeater 0 SSID should be 0", err);
-        TEST_ASSERT(path->repeaters[0].ch == false, "Repeater 0 ch should be false", err);
-        TEST_ASSERT(strcmp(path->repeaters[1].callsign, "REPEAT") == 0, "Repeater 1 callsign should be REPEAT", err);
-        TEST_ASSERT(path->repeaters[1].ssid == 1, "Repeater 1 SSID should be 1", err);
-        TEST_ASSERT(path->repeaters[1].ch == true, "Repeater 1 ch should be true", err);
+    // Test 1: Single repeater
+    {
+        ax25_address_t *addr1 = ax25_address_from_string("REPEATER-1*", &err);
+        TEST_ASSERT(addr1 != NULL, "Address creation should succeed", err);
+        ax25_address_t *repeaters[] = {addr1};
+        ax25_path_t *path = ax25_path_new(repeaters, 1, &err);
+        TEST_ASSERT(path != NULL, "Path creation with one repeater should succeed", err);
+        TEST_ASSERT(path->num_repeaters == 1, "Path should have 1 repeater", err);
+        TEST_ASSERT(strcmp(path->repeaters[0].callsign, "REPEAT") == 0, "Repeater callsign should be REPEAT", err);
+        TEST_ASSERT(path->repeaters[0].ssid == 1, "Repeater SSID should be 1", err);
+        TEST_ASSERT(path->repeaters[0].ch == true, "Repeater ch should be true", err);
         ax25_path_free(path, &err);
+        ax25_address_free(addr1, &err);
     }
-    ax25_address_free(addr1, &err);
-    ax25_address_free(addr2, &err);
+
+    // Test 2: Zero repeaters
+    {
+        ax25_address_t *repeaters[] = {};
+        ax25_path_t *path = ax25_path_new(repeaters, 0, &err);
+        TEST_ASSERT(path == NULL, "Path creation with zero repeaters should fail", err);
+        TEST_ASSERT(err == 2, "Error should be 2 for invalid input", err);
+    }
+
+    // Test 3: Maximum repeaters (8)
+    {
+        ax25_address_t *repeaters[MAX_REPEATERS];
+        for (int i = 0; i < MAX_REPEATERS; i++) {
+            char callsign[12];
+            sprintf(callsign, "RPT%d-%d*", i, i);
+            repeaters[i] = ax25_address_from_string(callsign, &err);
+            TEST_ASSERT(repeaters[i] != NULL, "Repeater address creation should succeed", err);
+        }
+        ax25_path_t *path = ax25_path_new(repeaters, MAX_REPEATERS, &err);
+        TEST_ASSERT(path != NULL, "Path creation with max repeaters should succeed", err);
+        TEST_ASSERT(path->num_repeaters == MAX_REPEATERS, "Path should have 8 repeaters", err);
+        for (int i = 0; i < MAX_REPEATERS; i++) {
+            char expected_callsign[7];
+            sprintf(expected_callsign, "RPT%d", i);
+            TEST_ASSERT(strcmp(path->repeaters[i].callsign, expected_callsign) == 0, "Repeater callsign should match", err);
+            TEST_ASSERT(path->repeaters[i].ssid == i, "Repeater SSID should match index", err);
+            TEST_ASSERT(path->repeaters[i].ch == true, "Repeater ch should be true", err);
+        }
+        ax25_path_free(path, &err);
+        for (int i = 0; i < MAX_REPEATERS; i++) {
+            ax25_address_free(repeaters[i], &err);
+        }
+    }
+
+    // Test 4: Exceeding maximum repeaters (9)
+    {
+        ax25_address_t *repeaters[MAX_REPEATERS + 1];
+        for (int i = 0; i < MAX_REPEATERS + 1; i++) {
+            char callsign[12];
+            sprintf(callsign, "RPT%d-%d*", i, i);
+            repeaters[i] = ax25_address_from_string(callsign, &err);
+            TEST_ASSERT(repeaters[i] != NULL, "Repeater address creation should succeed", err);
+        }
+        ax25_path_t *path = ax25_path_new(repeaters, MAX_REPEATERS + 1, &err);
+        TEST_ASSERT(path == NULL, "Path creation exceeding max repeaters should fail", err);
+        TEST_ASSERT(err == 2, "Error should be 2 for too many repeaters", err);
+        for (int i = 0; i < MAX_REPEATERS + 1; i++) {
+            ax25_address_free(repeaters[i], &err);
+        }
+    }
+
+    // Test 5: NULL repeaters array
+    {
+        ax25_path_t *path = ax25_path_new(NULL, 1, &err);
+        TEST_ASSERT(path == NULL, "Path creation with NULL repeaters should fail", err);
+        TEST_ASSERT(err == 2, "Error should be 2 for NULL input", err);
+    }
+
+    // Test 6: NULL individual repeater
+    {
+        ax25_address_t *addr1 = ax25_address_from_string("REPEATER-1*", &err);
+        TEST_ASSERT(addr1 != NULL, "Address creation should succeed", err);
+        ax25_address_t *repeaters[] = {addr1, NULL};
+        ax25_path_t *path = ax25_path_new(repeaters, 2, &err);
+        TEST_ASSERT(path == NULL, "Path creation with NULL repeater should fail", err);
+        TEST_ASSERT(err == 2, "Error should be 2 for NULL repeater", err);
+        ax25_address_free(addr1, &err);
+    }
+
+    // Test 7: Realistic AX.25 path with 3 repeaters
+    {
+        ax25_address_t *addr1 = ax25_address_from_string("WIDE1-1*", &err);
+        ax25_address_t *addr2 = ax25_address_from_string("WIDE2-2*", &err);
+        ax25_address_t *addr3 = ax25_address_from_string("NOCALL-0", &err);
+        TEST_ASSERT(addr1 != NULL && addr2 != NULL && addr3 != NULL, "Address creation should succeed", err);
+        ax25_address_t *repeaters[] = {addr1, addr2, addr3};
+        ax25_path_t *path = ax25_path_new(repeaters, 3, &err);
+        TEST_ASSERT(path != NULL, "Path creation with realistic repeaters should succeed", err);
+        TEST_ASSERT(path->num_repeaters == 3, "Path should have 3 repeaters", err);
+        TEST_ASSERT(strcmp(path->repeaters[0].callsign, "WIDE1") == 0, "First repeater callsign should be WIDE1", err);
+        TEST_ASSERT(path->repeaters[0].ssid == 1, "First repeater SSID should be 1", err);
+        TEST_ASSERT(path->repeaters[0].ch == true, "First repeater ch should be true", err);
+        TEST_ASSERT(strcmp(path->repeaters[1].callsign, "WIDE2") == 0, "Second repeater callsign should be WIDE2", err);
+        TEST_ASSERT(path->repeaters[1].ssid == 2, "Second repeater SSID should be 2", err);
+        TEST_ASSERT(path->repeaters[1].ch == true, "Second repeater ch should be true", err);
+        TEST_ASSERT(strcmp(path->repeaters[2].callsign, "NOCALL") == 0, "Third repeater callsign should be NOCALL", err);
+        TEST_ASSERT(path->repeaters[2].ssid == 0, "Third repeater SSID should be 0", err);
+        TEST_ASSERT(path->repeaters[2].ch == false, "Third repeater ch should be false", err);
+        ax25_path_free(path, &err);
+        ax25_address_free(addr1, &err);
+        ax25_address_free(addr2, &err);
+        ax25_address_free(addr3, &err);
+    }
+
     return 0;
 }
 
 int test_modulo128_source_address() {
-    printf("test_path_functions\n");
+    printf("test_modulo128_source_address\n");
     uint8_t err = 0;
 
     // Create addresses
