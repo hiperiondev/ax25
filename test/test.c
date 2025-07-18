@@ -67,6 +67,7 @@ uint32_t assert_count = 0;
     printf("\n")
 
 int test_address_functions() {
+    printf("test_address_functions\n");
     uint8_t err = 0;
 
     // Test ax25_address_from_string with "NOCALL-7*"
@@ -145,6 +146,7 @@ int test_address_functions() {
 }
 
 int test_path_functions() {
+    printf("test_path_functions\n");
     uint8_t err = 0;
 
     // Create addresses for path
@@ -169,6 +171,7 @@ int test_path_functions() {
 }
 
 int test_modulo128_source_address() {
+    printf("test_path_functions\n");
     uint8_t err = 0;
 
     // Create addresses
@@ -211,6 +214,7 @@ int test_modulo128_source_address() {
 }
 
 int test_modulo8_source_address() {
+    printf("test_modulo8_source_address\n");
     uint8_t err = 0;
 
     // Create addresses
@@ -252,6 +256,7 @@ int test_modulo8_source_address() {
 }
 
 int test_frame_header_functions() {
+    printf("test_frame_header_functions\n");
     uint8_t err = 0;
 
     // Test data: Header with destination "ABCDEF-7" and source "GHIJKL-1*"
@@ -292,6 +297,7 @@ int test_frame_header_functions() {
 }
 
 int test_frame_functions() {
+    printf("test_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: UI frame with dest "ABCDEF-7", src "GHIJKL-1*", control=0x03, PID=0xF0, payload="TEST"
@@ -321,6 +327,7 @@ int test_frame_functions() {
 }
 
 int test_raw_frame_functions() {
+    printf("test_raw_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Raw frame with header and payload, control byte set to 0x00 (I-frame)
@@ -346,6 +353,7 @@ int test_raw_frame_functions() {
 }
 
 int test_unnumbered_frame_functions() {
+    printf("test_unnumbered_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
@@ -380,6 +388,7 @@ int test_unnumbered_frame_functions() {
 }
 
 int test_unnumbered_information_frame_functions() {
+    printf("test_unnumbered_information_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
@@ -411,6 +420,7 @@ int test_unnumbered_information_frame_functions() {
 }
 
 int test_frame_reject_frame_functions() {
+    printf("test_frame_reject_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Header for "AAAAAA-0" -> "BBBBBB-0"
@@ -448,6 +458,7 @@ int test_frame_reject_frame_functions() {
 }
 
 int test_information_frame_functions() {
+    printf("test_frame_reject_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
@@ -482,6 +493,7 @@ int test_information_frame_functions() {
 }
 
 int test_supervisory_frame_functions() {
+    printf("test_supervisory_frame_functions\n");
     uint8_t err = 0;
 
     ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
@@ -513,6 +525,7 @@ int test_supervisory_frame_functions() {
 }
 
 int test_xid_parameter_functions() {
+    printf("test_xid_parameter_functions\n");
     uint8_t err = 0;
 
     uint8_t pv[] = { 0x01, 0x02 };
@@ -571,6 +584,7 @@ int test_xid_parameter_functions() {
 }
 
 int test_exchange_identification_frame_functions() {
+    printf("test_exchange_identification_frame_functions\n");
     uint8_t err = 0;
 
     // Test data: Header for "ABCDEF-7" -> "GHIJKL-1*"
@@ -609,6 +623,7 @@ int test_exchange_identification_frame_functions() {
 }
 
 int test_test_frame_functions() {
+    printf("test_test_frame_functions\n");
     uint8_t err = 0;
 
     ax25_frame_header_t *header = ax25_frame_header_decode((uint8_t[] ) { 0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0xE0, 0x9C, 0x9E, 0x86, 0x82, 0x98, 0x98, 0xE1 },
@@ -641,6 +656,7 @@ int test_test_frame_functions() {
 }
 
 int test_ax25_modulo128(void) {
+    printf("test_ax25_modulo128\n");
     uint8_t err = 0;
     ax25_frame_t *frame;
 
@@ -667,6 +683,7 @@ int test_ax25_modulo128(void) {
 }
 
 int test_ax25_modulo128_encode() {
+    printf("test_ax25_modulo128_encode\n");
     uint8_t err = 0;
 
     // Create addresses
@@ -736,6 +753,7 @@ int test_ax25_modulo128_encode() {
 }
 
 int test_ax25_connection(void) {
+    printf("test_ax25_connection\n");
     uint8_t err = 0;
 
     // AX.25 Connection Test Packets
@@ -910,6 +928,7 @@ int test_ax25_connection(void) {
 }
 
 int test_frmr_frame_functions() {
+    printf("test_frmr_frame_functions\n");
     uint8_t err = 0;
 
     // Define the modulo-8 FRMR frame components
@@ -957,6 +976,7 @@ int test_frmr_frame_functions() {
 }
 
 int test_auto_modulo_detection() {
+    printf("test_auto_modulo_detection\n");
     uint8_t err = 0;
 
     // Test modulo-8 I-frame
@@ -997,6 +1017,7 @@ int test_auto_modulo_detection() {
 }
 
 int test_hdlc() {
+    printf("test_hdlc\n");
     uint8_t err = 0;
 
     // Test Case 1: Valid UI frame
@@ -1204,6 +1225,7 @@ int test_hdlc() {
 }
 
 int test_segmentation_reassembly() {
+    printf("test_segmentation_reassembly\n");
     uint8_t err = 0;
     int result = 0; // Track test result
 
@@ -1294,6 +1316,7 @@ int test_segmentation_reassembly() {
 }
 
 void test_ax25_frame_print() {
+    printf("test_ax25_frame_print\n");
     // UI frame
     unsigned char ui_frame[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
     printf("UI Frame:\n");
@@ -1327,6 +1350,7 @@ void test_ax25_frame_print() {
 }
 
 void test_ax25_hdlc_frame_print() {
+    printf("test_ax25_hdlc_frame_print\n");
     // Inline bit reversal function
     unsigned char reverse_bits(unsigned char byte) {
         byte = ((byte >> 1) & 0x55) | ((byte & 0x55) << 1);
@@ -1336,7 +1360,7 @@ void test_ax25_hdlc_frame_print() {
     }
 
     // Inline CRC calculation function
-    uint16_t calculate_crc(unsigned char* frame, int len) {
+    uint16_t calculate_crc(unsigned char *frame, int len) {
         uint16_t crc = 0xFFFF;
         for (int i = 0; i < len; i++) {
             crc ^= frame[i];
@@ -1352,23 +1376,23 @@ void test_ax25_hdlc_frame_print() {
     }
 
     // Helper to construct HDLC frame
-    unsigned char* construct_hdlc_frame(unsigned char* ax25_frame, int ax25_len, int* hdlc_len) {
+    unsigned char* construct_hdlc_frame(unsigned char *ax25_frame, int ax25_len, int *hdlc_len) {
         // Reverse bits of each byte
-        unsigned char* reversed = malloc(ax25_len);
+        unsigned char *reversed = malloc(ax25_len);
         for (int i = 0; i < ax25_len; i++) {
             reversed[i] = reverse_bits(ax25_frame[i]);
         }
         // Calculate CRC
         uint16_t crc = calculate_crc(reversed, ax25_len);
         // Append CRC
-        unsigned char* frame_with_fcs = malloc(ax25_len + 2);
+        unsigned char *frame_with_fcs = malloc(ax25_len + 2);
         memcpy(frame_with_fcs, reversed, ax25_len);
         frame_with_fcs[ax25_len] = (crc >> 8) & 0xFF;
         frame_with_fcs[ax25_len + 1] = crc & 0xFF;
         free(reversed);
         // Add flags
         *hdlc_len = ax25_len + 4; // flags + fcs
-        unsigned char* hdlc_frame = malloc(*hdlc_len);
+        unsigned char *hdlc_frame = malloc(*hdlc_len);
         hdlc_frame[0] = 0x7E;
         memcpy(&hdlc_frame[1], frame_with_fcs, ax25_len + 2);
         hdlc_frame[*hdlc_len - 1] = 0x7E;
@@ -1377,47 +1401,309 @@ void test_ax25_hdlc_frame_print() {
     }
 
     // UI frame
-    unsigned char ui_frame[] = {0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T'};
+    unsigned char ui_frame[] = { 0x82, 0x84, 0x86, 0x88, 0x8A, 0x8C, 0xEE, 0x8E, 0x90, 0x92, 0x94, 0x96, 0x98, 0x63, 0x03, 0xF0, 'T', 'E', 'S', 'T' };
     int hdlc_len;
-    unsigned char* hdlc_ui_frame = construct_hdlc_frame(ui_frame, sizeof(ui_frame), &hdlc_len);
+    unsigned char *hdlc_ui_frame = construct_hdlc_frame(ui_frame, sizeof(ui_frame), &hdlc_len);
     printf("HDLC UI Frame:\n");
     ax25_hdlc_frame_print(hdlc_ui_frame, hdlc_len);
     free(hdlc_ui_frame);
 
     // I-frame
-    unsigned char i_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
-    unsigned char* hdlc_i_frame = construct_hdlc_frame(i_frame, sizeof(i_frame), &hdlc_len);
+    unsigned char i_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x00, 0xF0, 'H', 'e', 'l', 'l', 'o', ',',
+            ' ', 'W', 'o', 'r', 'l', 'd', '!' };
+    unsigned char *hdlc_i_frame = construct_hdlc_frame(i_frame, sizeof(i_frame), &hdlc_len);
     printf("\nHDLC I-Frame:\n");
     ax25_hdlc_frame_print(hdlc_i_frame, hdlc_len);
     free(hdlc_i_frame);
 
     // SABM frame
-    unsigned char sabm_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x3F};
-    unsigned char* hdlc_sabm_frame = construct_hdlc_frame(sabm_frame, sizeof(sabm_frame), &hdlc_len);
+    unsigned char sabm_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x3F };
+    unsigned char *hdlc_sabm_frame = construct_hdlc_frame(sabm_frame, sizeof(sabm_frame), &hdlc_len);
     printf("\nHDLC SABM Frame:\n");
     ax25_hdlc_frame_print(hdlc_sabm_frame, hdlc_len);
     free(hdlc_sabm_frame);
 
     // UA frame
-    unsigned char ua_frame[] = {0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x73};
-    unsigned char* hdlc_ua_frame = construct_hdlc_frame(ua_frame, sizeof(ua_frame), &hdlc_len);
+    unsigned char ua_frame[] = { 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x73 };
+    unsigned char *hdlc_ua_frame = construct_hdlc_frame(ua_frame, sizeof(ua_frame), &hdlc_len);
     printf("\nHDLC UA Frame:\n");
     ax25_hdlc_frame_print(hdlc_ua_frame, hdlc_len);
     free(hdlc_ua_frame);
 
     // RR frame
-    unsigned char rr_frame[] = {0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x31};
-    unsigned char* hdlc_rr_frame = construct_hdlc_frame(rr_frame, sizeof(rr_frame), &hdlc_len);
+    unsigned char rr_frame[] = { 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEF, 0x31 };
+    unsigned char *hdlc_rr_frame = construct_hdlc_frame(rr_frame, sizeof(rr_frame), &hdlc_len);
     printf("\nHDLC RR Frame:\n");
     ax25_hdlc_frame_print(hdlc_rr_frame, hdlc_len);
     free(hdlc_rr_frame);
 
     // DISC frame
-    unsigned char disc_frame[] = {0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x43};
-    unsigned char* hdlc_disc_frame = construct_hdlc_frame(disc_frame, sizeof(disc_frame), &hdlc_len);
+    unsigned char disc_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x43 };
+    unsigned char *hdlc_disc_frame = construct_hdlc_frame(disc_frame, sizeof(disc_frame), &hdlc_len);
     printf("\nHDLC DISC Frame:\n");
     ax25_hdlc_frame_print(hdlc_disc_frame, hdlc_len);
     free(hdlc_disc_frame);
+}
+
+// Add this function to test extended I-frame
+int test_extended_i_frame() {
+    printf("test_extended_i_frame\n");
+    uint8_t err = 0;
+    // Extended I-frame: Dest: VA3BBB-7, Src: VA3AAA-1 (res1=0), Control: 0x0000 (N(S)=0, N(R)=0, P/F=0), PID: 0xF0, Payload: "Extended"
+    unsigned char extended_i_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x23, 0x00, 0x00, 0xF0, 'E', 'x', 't',
+            'e', 'n', 'd', 'e', 'd' };
+    size_t extended_i_frame_len = sizeof(extended_i_frame);
+    ax25_frame_t *decoded_frame = ax25_frame_decode(extended_i_frame, extended_i_frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding extended I-frame", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_INFORMATION_16BIT, "Frame type should be I-frame 16-bit", err);
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*) decoded_frame;
+        TEST_ASSERT(i_frame->nr == 0, "nr should be 0", err);
+        TEST_ASSERT(i_frame->ns == 0, "ns should be 0", err);
+        TEST_ASSERT(i_frame->pf == false, "Poll/Final should be false", err);
+        TEST_ASSERT(i_frame->pid == 0xF0, "PID should be 0xF0", err);
+        TEST_ASSERT(i_frame->payload_len == 8, "Payload length should be 8", err);
+        TEST_ASSERT(memcmp(i_frame->payload, "Extended", 8) == 0, "Payload should be 'Extended'", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+// Add this function to test SABME frame
+int test_sabme_frame() {
+    printf("test_sabme_frame\n");
+    uint8_t err = 0;
+    // SABME frame: Dest: VA3BBB-7, Src: VA3AAA-1, Control: 0x7F (SABME, P=1)
+    unsigned char sabme_frame[] = { 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xEE, 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x63, 0x7F };
+    size_t sabme_frame_len = sizeof(sabme_frame);
+    ax25_frame_t *decoded_frame = ax25_frame_decode(sabme_frame, sabme_frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding SABME frame", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_UNNUMBERED_SABME, "Frame type should be SABME", err);
+        ax25_unnumbered_frame_t *u_frame = (ax25_unnumbered_frame_t*) decoded_frame;
+        TEST_ASSERT(u_frame->pf == true, "Poll/Final should be true", err);
+        TEST_ASSERT(u_frame->modifier == 0x6F, "Modifier should be 0x6F", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+// Add this function to test extended S-frame (RR)
+int test_extended_s_frame() {
+    printf("test_extended_s_frame\n");
+    uint8_t err = 0;
+    // Extended RR frame: Dest: VA3AAA-1, Src: VA3BBB-1 (res1=0), Control: 0x0100 (RR, N(R)=0, P/F=0)
+    unsigned char extended_rr_frame[] = { 0xAC, 0x82, 0x66, 0x82, 0x82, 0x82, 0x62, 0xAC, 0x82, 0x66, 0x84, 0x84, 0x84, 0xA3, 0x01, 0x00 };
+    size_t extended_rr_frame_len = sizeof(extended_rr_frame);
+    ax25_frame_t *decoded_frame = ax25_frame_decode(extended_rr_frame, extended_rr_frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding extended RR frame", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_SUPERVISORY_RR_16BIT, "Frame type should be RR 16-bit", err);
+        ax25_supervisory_frame_t *s_frame = (ax25_supervisory_frame_t*) decoded_frame;
+        TEST_ASSERT(s_frame->nr == 0, "nr should be 0", err);
+        TEST_ASSERT(s_frame->pf == false, "Poll/Final should be false", err);
+        TEST_ASSERT(s_frame->code == 0x00, "Code should be 0x00 (RR)", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+// Add this function to test maximum repeaters
+int test_max_repeaters() {
+    printf("test_max_repeaters\n");
+    uint8_t err = 0;
+    // Create a frame with maximum repeaters (8)
+    // UI frame with dummy repeaters: Dest: AAAAAA-0, Src: BBBBBB-0, 8 repeaters (CCCCCC-0 to JJJJJJ-0), Control: 0x03, PID: 0xF0
+    unsigned char max_repeaters_frame[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, // Dest: AAAAAA-0, extension=0
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x60, // Src: BBBBBB-0, extension=0
+            // Repeaters: CCCCCC-0 to JJJJJJ-0
+            0x86, 0x86, 0x86, 0x86, 0x86, 0x86, 0x60, // CCCCCC-0, extension=0
+            0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x60, // DDDDDD-0, extension=0
+            0x8A, 0x8A, 0x8A, 0x8A, 0x8A, 0x8A, 0x60, // EEEEEE-0, extension=0
+            0x8C, 0x8C, 0x8C, 0x8C, 0x8C, 0x8C, 0x60, // FFFFFF-0, extension=0
+            0x8E, 0x8E, 0x8E, 0x8E, 0x8E, 0x8E, 0x60, // GGGGGG-0, extension=0
+            0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x60, // HHHHHH-0, extension=0
+            0x92, 0x92, 0x92, 0x92, 0x92, 0x92, 0x60, // IIIIII-0, extension=0
+            0x94, 0x94, 0x94, 0x94, 0x94, 0x94, 0x61, // JJJJJJ-0, extension=1
+            0x03, 0xF0 // Control: UI, PID: 0xF0
+            };
+    size_t frame_len = sizeof(max_repeaters_frame);
+    ax25_frame_t *decoded_frame = ax25_frame_decode(max_repeaters_frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding frame with maximum repeaters", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->header.repeaters.num_repeaters == 8, "Should have 8 repeaters", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+// Add this function to test large payload
+int test_large_payload() {
+    printf("test_large_payload\n");
+    uint8_t err = 0;
+    // Create a UI frame with 256-byte payload: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x03, PID: 0xF0
+    unsigned char large_payload_frame[14 + 1 + 1 + 256]; // Header + control + PID + payload
+    // Header: AAAAAA-0 -> BBBBBB-0
+    unsigned char header[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };
+    memcpy(large_payload_frame, header, 14);
+    large_payload_frame[14] = 0x03; // Control byte for UI
+    large_payload_frame[15] = 0xF0; // PID
+    for (int i = 0; i < 256; i++) {
+        large_payload_frame[16 + i] = (uint8_t) i;
+    }
+    size_t frame_len = 14 + 1 + 1 + 256;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(large_payload_frame, frame_len, MODULO128_AUTO, &err);
+    if (decoded_frame == NULL || err != 0) {
+        printf("\033[0;31m[%04d] FAIL(%u): Decoding frame with large payload\033[0m\n", ++assert_count, err);
+        return 1;
+    }
+    if (decoded_frame->type != AX25_FRAME_UNNUMBERED_INFORMATION) {
+        printf("\033[0;31m[%04d] FAIL: Frame type should be UI\033[0m\n", ++assert_count);
+        ax25_frame_free(decoded_frame, &err);
+        return 1;
+    }
+    ax25_unnumbered_information_frame_t *ui_frame = (ax25_unnumbered_information_frame_t*) decoded_frame;
+    if (ui_frame->payload_len != 256) {
+        printf("\033[0;31m[%04d] FAIL: Payload length should be 256\033[0m\n", ++assert_count);
+        ax25_frame_free(decoded_frame, &err);
+        return 1;
+    }
+    // Check the entire payload at once
+    int cmp_result = memcmp(ui_frame->payload, large_payload_frame + 16, 256);
+    if (cmp_result == 0) {
+        printf("\033[0;32m[%04d]    PASS: Payload data matches\033[0m\n", ++assert_count);
+    } else {
+        printf("\033[0;31m[%04d] FAIL: Payload data mismatch\033[0m\n", ++assert_count);
+        // Optionally, print details about the mismatch
+        for (int i = 0; i < 256; i++) {
+            if (ui_frame->payload[i] != large_payload_frame[16 + i]) {
+                printf("         -- Mismatch at byte %d: expected 0x%02X, got 0x%02X\n", i, large_payload_frame[16 + i], ui_frame->payload[i]);
+                break; // Only print the first mismatch
+            }
+        }
+    }
+    ax25_frame_free(decoded_frame, &err);
+    return cmp_result != 0;
+}
+
+int test_ui_frame_no_payload() {
+    printf("test_ui_frame_no_payload\n");
+    uint8_t err = 0;
+    // Create a UI frame with no payload: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x03, PID: 0xF0
+    unsigned char frame[16]; // 14 header + 1 control + 1 PID
+    // Header: AAAAAA-0 -> BBBBBB-0
+    unsigned char header[] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, // dest: AAAAAA-0, C=0
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61  // src: BBBBBB-0, C=1
+            };
+    memcpy(frame, header, 14);
+    frame[14] = 0x03; // Control byte for UI
+    frame[15] = 0xF0; // PID
+    size_t frame_len = 16;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding UI frame with no payload", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_UNNUMBERED_INFORMATION, "Frame type should be UI", err);
+        ax25_unnumbered_information_frame_t *ui_frame = (ax25_unnumbered_information_frame_t*) decoded_frame;
+        TEST_ASSERT(ui_frame->payload_len == 0, "Payload length should be 0", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+int test_i_frame_no_payload() {
+    printf("test_i_frame_no_payload\n");
+    uint8_t err = 0;
+    // Create an I frame with no payload: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x00 (I frame, N(S)=0, N(R)=0, P=0)
+    unsigned char frame[15] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0xE0, // Dest: AAAAAA-0, SSID=0xE0 (C=1, res1=1, res0=1, extension=0)
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61, // Src: BBBBBB-0, SSID=0x61 (C=0, res1=1, res0=1, extension=1)
+            0x00 // Control byte
+            };
+    size_t frame_len = 15;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_FALSE, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding I frame with no payload", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_INFORMATION_8BIT, "Frame type should be I frame (modulo 8)", err);
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*) decoded_frame;
+        TEST_ASSERT(i_frame->payload_len == 0, "Payload length should be 0", err);
+        TEST_ASSERT(i_frame->ns == 0, "N(S) should be 0", err);
+        TEST_ASSERT(i_frame->nr == 0, "N(R) should be 0", err);
+        TEST_ASSERT(i_frame->pf == false, "P/F should be 0", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+int test_i_frame_no_payload_modulo128() {
+    printf("test_i_frame_no_payload_modulo128\n");
+    uint8_t err = 0;
+    // Create an I frame with no payload, modulo 128: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x00 0x00
+    unsigned char frame[16] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0xE0, // Dest: AAAAAA-0, SSID=0xE0 (C=1, res1=1, res0=1, extension=0)
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x21, // Src: BBBBBB-0, SSID=0x21 (C=0, res1=0, res0=1, extension=1)
+            0x00, 0x00 // Control bytes
+            };
+    size_t frame_len = 16;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding I frame with no payload (modulo 128)", err);
+    if (decoded_frame) {
+        TEST_ASSERT(decoded_frame->type == AX25_FRAME_INFORMATION_16BIT, "Frame type should be I frame (modulo 128)", err);
+        ax25_information_frame_t *i_frame = (ax25_information_frame_t*) decoded_frame;
+        TEST_ASSERT(i_frame->payload_len == 0, "Payload length should be 0", err);
+        TEST_ASSERT(i_frame->ns == 0, "N(S) should be 0", err);
+        TEST_ASSERT(i_frame->nr == 0, "N(R) should be 0", err);
+        TEST_ASSERT(i_frame->pf == false, "P/F should be 0", err);
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+int test_invalid_address_field() {
+    printf("test_invalid_address_field\n");
+    uint8_t err = 0;
+    // Create a frame with destination (E=0) and source (E=0, invalid termination)
+    unsigned char frame[15] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, // Destination: AAAAAA-0, E=0
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x60, // Source: BBBBBB-0, E=0
+            0x03  // Control byte for UI
+            };
+    size_t frame_len = 15;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame == NULL && err == 5, "Decoding frame with invalid address field", err);
+    if (decoded_frame) {
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+int test_valid_address_field() {
+    printf("test_valid_address_field\n");
+    uint8_t err = 0;
+    // Create a frame with destination (E=0) and source (E=1)
+    unsigned char frame[15] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60, // Destination: AAAAAA-0, E=0
+            0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61, // Source: BBBBBB-0, E=1
+            0x03  // Control byte for UI
+            };
+    size_t frame_len = 15;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL && err == 0, "Decoding frame with valid address field", err);
+    if (decoded_frame) {
+        ax25_frame_free(decoded_frame, &err);
+    }
+    return 0;
+}
+
+int test_invalid_control_field() {
+    printf("test_invalid_control_field\n");
+    uint8_t err = 0;
+    // Create a U frame with invalid control byte (0xFF)
+    unsigned char frame[15];
+    unsigned char dest[7] = { 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x60 }; // AAAAAA-0, E=0
+    unsigned char src[7] = { 0x84, 0x84, 0x84, 0x84, 0x84, 0x84, 0x61 };  // BBBBBB-0, E=1
+    memcpy(frame, dest, 7);
+    memcpy(frame + 7, src, 7);
+    frame[14] = 0xFF; // Invalid control byte for U frame
+    size_t frame_len = 15;
+    ax25_frame_t *decoded_frame = ax25_frame_decode(frame, frame_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame == NULL && err == 6, "Decoding U frame with invalid control field", err);
+    return 0;
 }
 
 int main() {
@@ -1444,6 +1730,18 @@ int main() {
     result |= test_frmr_frame_functions();
     result |= test_auto_modulo_detection();
     result |= test_segmentation_reassembly();
+    result |= test_sabme_frame();
+    result |= test_extended_i_frame();
+    result |= test_extended_s_frame();
+    result |= test_max_repeaters();
+    result |= test_large_payload();
+    result |= test_ui_frame_no_payload();
+    result |= test_i_frame_no_payload();
+    result |= test_i_frame_no_payload_modulo128();
+    result |= test_invalid_address_field();
+    result |= test_valid_address_field();
+    result |= test_invalid_control_field();
+
     printf("\n----------------------------------------------------------------------------------\n\n");
     test_ax25_frame_print();
     printf("\n----------------------------------------------------------------------------------\n");
