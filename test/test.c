@@ -130,14 +130,14 @@ int test_address_functions() {
 }
 
 int test_path_functions() {
-	printf("test_path_functions\n");
+    printf("test_path_functions\n");
     uint8_t err = 0;
 
     // Test 1: Single repeater
     {
         ax25_address_t *addr1 = ax25_address_from_string("REPEATER-1*", &err);
         TEST_ASSERT(addr1 != NULL, "Address creation should succeed", err);
-        ax25_address_t *repeaters[] = {addr1};
+        ax25_address_t *repeaters[] = { addr1 };
         ax25_path_t *path = ax25_path_new(repeaters, 1, &err);
         TEST_ASSERT(path != NULL, "Path creation with one repeater should succeed", err);
         TEST_ASSERT(path->num_repeaters == 1, "Path should have 1 repeater", err);
@@ -150,7 +150,7 @@ int test_path_functions() {
 
     // Test 2: Zero repeaters
     {
-        ax25_address_t *repeaters[] = {};
+        ax25_address_t *repeaters[] = { };
         ax25_path_t *path = ax25_path_new(repeaters, 0, &err);
         TEST_ASSERT(path == NULL, "Path creation with zero repeaters should fail", err);
         TEST_ASSERT(err == 2, "Error should be 2 for invalid input", err);
@@ -209,7 +209,7 @@ int test_path_functions() {
     {
         ax25_address_t *addr1 = ax25_address_from_string("REPEATER-1*", &err);
         TEST_ASSERT(addr1 != NULL, "Address creation should succeed", err);
-        ax25_address_t *repeaters[] = {addr1, NULL};
+        ax25_address_t *repeaters[] = { addr1, NULL };
         ax25_path_t *path = ax25_path_new(repeaters, 2, &err);
         TEST_ASSERT(path == NULL, "Path creation with NULL repeater should fail", err);
         TEST_ASSERT(err == 2, "Error should be 2 for NULL repeater", err);
@@ -222,7 +222,7 @@ int test_path_functions() {
         ax25_address_t *addr2 = ax25_address_from_string("WIDE2-2*", &err);
         ax25_address_t *addr3 = ax25_address_from_string("NOCALL-0", &err);
         TEST_ASSERT(addr1 != NULL && addr2 != NULL && addr3 != NULL, "Address creation should succeed", err);
-        ax25_address_t *repeaters[] = {addr1, addr2, addr3};
+        ax25_address_t *repeaters[] = { addr1, addr2, addr3 };
         ax25_path_t *path = ax25_path_new(repeaters, 3, &err);
         TEST_ASSERT(path != NULL, "Path creation with realistic repeaters should succeed", err);
         TEST_ASSERT(path->num_repeaters == 3, "Path should have 3 repeaters", err);
@@ -1780,6 +1780,267 @@ int test_invalid_control_field() {
     return 0;
 }
 
+int test_sabme_ua_negotiation() {
+    printf("test_sabme_ua_negotiation\n");
+    uint8_t err = 0;
+
+    // Create SABME frame: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x6F (SABME, P/F=0)
+    ax25_unnumbered_frame_t *sabme_frame = malloc(sizeof(ax25_unnumbered_frame_t));
+    sabme_frame->base.type = AX25_FRAME_UNNUMBERED_SABME;
+    sabme_frame->base.header.destination = (ax25_address_t ) { .callsign = "AAAAAA", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    sabme_frame->base.header.source = (ax25_address_t ) { .callsign = "BBBBBB", .ssid = 0, .ch = false, .res0 = true, .res1 = false, .extension = true };
+    sabme_frame->base.header.cr = true;
+    sabme_frame->base.header.src_cr = false;
+    sabme_frame->base.header.repeaters.num_repeaters = 0;
+    sabme_frame->pf = false;
+    sabme_frame->modifier = 0x6F;
+
+    // Test 1: UA Response (modulo-128)
+    ax25_unnumbered_frame_t *ua_response = malloc(sizeof(ax25_unnumbered_frame_t));
+    ua_response->base.type = AX25_FRAME_UNNUMBERED_UA;
+    ua_response->base.header = sabme_frame->base.header; // Copy header
+    ua_response->base.header.destination.ch = false;
+    ua_response->base.header.source.ch = true;
+    ua_response->base.header.cr = false;
+    ua_response->base.header.src_cr = true;
+    ua_response->pf = false;
+    ua_response->modifier = 0x63;
+    TEST_ASSERT(is_modulo128_used((ax25_frame_t*)sabme_frame, (ax25_frame_t*)ua_response) == true, "UA response should indicate modulo-128", err);
+
+    // Test 2: DM Response (fallback to modulo-8)
+    ax25_unnumbered_frame_t *dm_response = malloc(sizeof(ax25_unnumbered_frame_t));
+    dm_response->base.type = AX25_FRAME_UNNUMBERED_DM;
+    dm_response->base.header = sabme_frame->base.header;
+    dm_response->base.header.destination.ch = false;
+    dm_response->base.header.source.ch = true;
+    dm_response->base.header.cr = false;
+    dm_response->base.header.src_cr = true;
+    dm_response->pf = false;
+    dm_response->modifier = 0x0F;
+    TEST_ASSERT(is_modulo128_used((ax25_frame_t*)sabme_frame, (ax25_frame_t*)dm_response) == false, "DM response should indicate modulo-8", err);
+
+    // Test 3: FRMR Response (fallback to modulo-8)
+    ax25_frame_reject_frame_t *frmr_response = malloc(sizeof(ax25_frame_reject_frame_t));
+    frmr_response->base.base.type = AX25_FRAME_UNNUMBERED_FRMR;
+    frmr_response->base.base.header = sabme_frame->base.header;
+    frmr_response->base.base.header.destination.ch = false;
+    frmr_response->base.base.header.source.ch = true;
+    frmr_response->base.base.header.cr = false;
+    frmr_response->base.base.header.src_cr = true;
+    frmr_response->base.pf = false;
+    frmr_response->base.modifier = 0x87;
+    frmr_response->is_modulo128 = false;
+    frmr_response->frmr_control = 0x6F;
+    frmr_response->vs = 0;
+    frmr_response->vr = 0;
+    frmr_response->frmr_cr = false;
+    frmr_response->w = true;
+    frmr_response->x = false;
+    frmr_response->y = false;
+    frmr_response->z = false;
+    TEST_ASSERT(is_modulo128_used((ax25_frame_t*)sabme_frame, (ax25_frame_t*)frmr_response) == false, "FRMR response should indicate modulo-8", err);
+
+    // Cleanup
+    ax25_frame_free((ax25_frame_t*) sabme_frame, &err);
+    ax25_frame_free((ax25_frame_t*) ua_response, &err);
+    ax25_frame_free((ax25_frame_t*) dm_response, &err);
+    ax25_frame_free((ax25_frame_t*) frmr_response, &err);
+
+    return 0;
+}
+
+int test_sequence_number_wrap_around() {
+    printf("test_sequence_number_wrap_around\n");
+    uint8_t err = 0;
+
+    // Create I-frame with ns=127: Dest: AAAAAA-0, Src: BBBBBB-0, Control: ns=127, nr=0, P/F=0
+    ax25_information_frame_t *frame_127 = malloc(sizeof(ax25_information_frame_t));
+    frame_127->base.type = AX25_FRAME_INFORMATION_16BIT;
+    frame_127->base.header.destination = (ax25_address_t ) { .callsign = "AAAAAA", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    frame_127->base.header.source = (ax25_address_t ) { .callsign = "BBBBBB", .ssid = 0, .ch = false, .res0 = true, .res1 = false, .extension = true };
+    frame_127->base.header.cr = true;
+    frame_127->base.header.src_cr = false;
+    frame_127->base.header.repeaters.num_repeaters = 0;
+    frame_127->nr = 0;
+    frame_127->pf = false;
+    frame_127->ns = 127;
+    frame_127->pid = 0xF0;
+    frame_127->payload_len = 0;
+    frame_127->payload = NULL;
+
+    // Create I-frame with ns=0 (wrap-around)
+    ax25_information_frame_t *frame_0 = malloc(sizeof(ax25_information_frame_t));
+    *frame_0 = *frame_127; // Copy all fields
+    frame_0->ns = 0;
+
+    // Encode both frames
+    size_t len_127, len_0;
+    uint8_t *encoded_127 = ax25_frame_encode((ax25_frame_t*) frame_127, &len_127, &err);
+    uint8_t *encoded_0 = ax25_frame_encode((ax25_frame_t*) frame_0, &len_0, &err);
+    TEST_ASSERT(encoded_127 != NULL && encoded_0 != NULL, "Encoding frames should succeed", err);
+
+    // Decode and verify
+    ax25_frame_t *decoded_127 = ax25_frame_decode(encoded_127, len_127, MODULO128_TRUE, &err);
+    ax25_frame_t *decoded_0 = ax25_frame_decode(encoded_0, len_0, MODULO128_TRUE, &err);
+    TEST_ASSERT(decoded_127 != NULL && decoded_0 != NULL, "Decoding frames should succeed", err);
+
+    ax25_information_frame_t *i_frame_127 = (ax25_information_frame_t*) decoded_127;
+    ax25_information_frame_t *i_frame_0 = (ax25_information_frame_t*) decoded_0;
+    TEST_ASSERT(i_frame_127->ns == 127 && i_frame_0->ns == 0, "Sequence numbers should wrap from 127 to 0", err);
+
+    // Cleanup
+    free(encoded_127);
+    free(encoded_0);
+    ax25_frame_free((ax25_frame_t*) frame_127, &err);
+    ax25_frame_free((ax25_frame_t*) frame_0, &err);
+    ax25_frame_free(decoded_127, &err);
+    ax25_frame_free(decoded_0, &err);
+
+    return 0;
+}
+
+int test_large_payloads() {
+    printf("test_large_payloads\n");
+    uint8_t err = 0;
+
+    // Create a 512-byte payload
+    size_t payload_size = 512;
+    uint8_t *payload = malloc(payload_size);
+    if (!payload) {
+        TEST_ASSERT(false, "Payload allocation should succeed", err);
+        return 1;
+    }
+    for (size_t i = 0; i < payload_size; i++) {
+        payload[i] = (uint8_t) (i % 256);
+    }
+
+    // Create UI frame: Dest: AAAAAA-0, Src: BBBBBB-0, Control: 0x03, PID: 0xF0
+    ax25_unnumbered_information_frame_t *ui_frame = malloc(sizeof(ax25_unnumbered_information_frame_t));
+    ui_frame->base.base.type = AX25_FRAME_UNNUMBERED_INFORMATION;
+    ui_frame->base.base.header.destination = (ax25_address_t ) { .callsign = "AAAAAA", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    ui_frame->base.base.header.source = (ax25_address_t ) { .callsign = "BBBBBB", .ssid = 0, .ch = false, .res0 = true, .res1 = true, .extension = true };
+    ui_frame->base.base.header.cr = true;
+    ui_frame->base.base.header.src_cr = false;
+    ui_frame->base.base.header.repeaters.num_repeaters = 0;
+    ui_frame->base.pf = false;
+    ui_frame->base.modifier = 0x03;
+    ui_frame->pid = 0xF0;
+    ui_frame->payload_len = payload_size;
+    ui_frame->payload = malloc(payload_size);
+    if (!ui_frame->payload) {
+        TEST_ASSERT(false, "Payload allocation for UI frame should succeed", err);
+        free(payload);
+        ax25_frame_free((ax25_frame_t*) ui_frame, &err);
+        return 1;
+    }
+    memcpy(ui_frame->payload, payload, payload_size);
+
+    // Encode the frame
+    size_t encoded_len;
+    uint8_t *encoded = ax25_frame_encode((ax25_frame_t*) ui_frame, &encoded_len, &err);
+    TEST_ASSERT(encoded != NULL, "Encoding UI frame with large payload should succeed", err);
+
+    // Decode the frame
+    ax25_frame_t *decoded_frame = ax25_frame_decode(encoded, encoded_len, MODULO128_AUTO, &err);
+    TEST_ASSERT(decoded_frame != NULL, "Decoding UI frame with large payload should succeed", err);
+
+    ax25_unnumbered_information_frame_t *decoded_ui = (ax25_unnumbered_information_frame_t*) decoded_frame;
+    TEST_ASSERT(decoded_ui->payload_len == payload_size, "Decoded payload size should match original", err);
+    TEST_ASSERT(memcmp(decoded_ui->payload, payload, payload_size) == 0, "Decoded payload data should match original", err);
+
+    // Cleanup
+    free(payload);
+    free(encoded);
+    ax25_frame_free((ax25_frame_t*) ui_frame, &err);
+    ax25_frame_free(decoded_frame, &err);
+
+    return 0;
+}
+
+int test_srej_functionality() {
+    uint8_t err = 0;
+
+    // Create three I-frames: ns=0, ns=1, ns=2
+    ax25_information_frame_t *frame_0 = malloc(sizeof(ax25_information_frame_t));
+    frame_0->base.type = AX25_FRAME_INFORMATION_8BIT;
+    frame_0->base.header.destination = (ax25_address_t ) { .callsign = "AAAAAA", .ssid = 0, .ch = true, .res0 = true, .res1 = true, .extension = false };
+    frame_0->base.header.source = (ax25_address_t ) { .callsign = "BBBBBB", .ssid = 0, .ch = false, .res0 = true, .res1 = true, .extension = true };
+    frame_0->base.header.cr = true;
+    frame_0->base.header.src_cr = false;
+    frame_0->base.header.repeaters.num_repeaters = 0;
+    frame_0->nr = 0;
+    frame_0->pf = false;
+    frame_0->ns = 0;
+    frame_0->pid = 0xF0;
+    frame_0->payload_len = 1;
+    frame_0->payload = malloc(1);
+    frame_0->payload[0] = 'A';
+
+    ax25_information_frame_t *frame_1 = malloc(sizeof(ax25_information_frame_t));
+    *frame_1 = *frame_0;
+    frame_1->ns = 1;
+    frame_1->payload = malloc(1);
+    frame_1->payload[0] = 'B';
+
+    ax25_information_frame_t *frame_2 = malloc(sizeof(ax25_information_frame_t));
+    *frame_2 = *frame_0;
+    frame_2->ns = 2;
+    frame_2->payload = malloc(1);
+    frame_2->payload[0] = 'C';
+
+    // Simulate packet loss: only frame_0 and frame_2 received
+    // Generate SREJ for ns=1
+    ax25_supervisory_frame_t *srej_frame = malloc(sizeof(ax25_supervisory_frame_t));
+    srej_frame->base.type = AX25_FRAME_SUPERVISORY_SREJ_8BIT;
+    srej_frame->base.header = frame_0->base.header;
+    srej_frame->base.header.destination.ch = false;
+    srej_frame->base.header.source.ch = true;
+    srej_frame->base.header.cr = false;
+    srej_frame->base.header.src_cr = true;
+    srej_frame->nr = 1; // Request retransmission of ns=1
+    srej_frame->pf = false;
+    srej_frame->code = 0x0C;
+
+    // Encode SREJ
+    size_t srej_len;
+    uint8_t *srej_encoded = ax25_supervisory_frame_encode(srej_frame, &srej_len, &err);
+    TEST_ASSERT(srej_encoded != NULL, "Encoding SREJ frame should succeed", err);
+
+    // Decode SREJ
+    ax25_frame_t *decoded_srej = ax25_frame_decode(srej_encoded, srej_len, MODULO128_FALSE, &err);
+    TEST_ASSERT(decoded_srej != NULL, "Decoding SREJ frame should succeed", err);
+    TEST_ASSERT(decoded_srej->type == AX25_FRAME_SUPERVISORY_SREJ_8BIT, "Decoded frame should be SREJ", err);
+    ax25_supervisory_frame_t *decoded_srej_frame = (ax25_supervisory_frame_t*) decoded_srej;
+    TEST_ASSERT(decoded_srej_frame->nr == 1, "SREJ should request ns=1", err);
+
+    // Simulate retransmission of frame_1
+    size_t retransmitted_len;
+    uint8_t *retransmitted = ax25_frame_encode((ax25_frame_t*) frame_1, &retransmitted_len, &err);
+    TEST_ASSERT(retransmitted != NULL, "Encoding retransmitted frame should succeed", err);
+
+    ax25_frame_t *decoded_retransmitted = ax25_frame_decode(retransmitted, retransmitted_len, MODULO128_FALSE, &err);
+    TEST_ASSERT(decoded_retransmitted != NULL, "Decoding retransmitted frame should succeed", err);
+    TEST_ASSERT(decoded_retransmitted->type == AX25_FRAME_INFORMATION_8BIT, "Retransmitted frame should be I-frame", err);
+    ax25_information_frame_t *retransmitted_frame = (ax25_information_frame_t*) decoded_retransmitted;
+    TEST_ASSERT(retransmitted_frame->ns == 1, "Retransmitted frame should have ns=1", err);
+    TEST_ASSERT(retransmitted_frame->payload_len == 1 && retransmitted_frame->payload[0] == 'B', "Retransmitted payload should be 'B'", err);
+
+    // Cleanup
+    free(frame_0->payload);
+    free(frame_1->payload);
+    free(frame_2->payload);
+    ax25_frame_free((ax25_frame_t*) frame_0, &err);
+    ax25_frame_free((ax25_frame_t*) frame_1, &err);
+    ax25_frame_free((ax25_frame_t*) frame_2, &err);
+    free(srej_encoded);
+    ax25_frame_free(decoded_srej, &err);
+    free(retransmitted);
+    ax25_frame_free(decoded_retransmitted, &err);
+    ax25_frame_free((ax25_frame_t*) srej_frame, &err);
+
+    return 0;
+}
+
 int main() {
     int result = 0;
     printf("\n----------------------------------------------------------------------------------\n");
@@ -1815,6 +2076,10 @@ int main() {
     result |= test_invalid_address_field();
     result |= test_valid_address_field();
     result |= test_invalid_control_field();
+    result |= test_sabme_ua_negotiation();
+    result |= test_sequence_number_wrap_around();
+    result |= test_large_payloads();
+    result |= test_sabme_ua_negotiation();
 
     printf("\n----------------------------------------------------------------------------------\n\n");
     test_ax25_frame_print();

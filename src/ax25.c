@@ -107,121 +107,6 @@ ax25_address_t* ax25_address_decode(const uint8_t *data, uint8_t *err) {
     return addr;
 }
 
-/*
-ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err) {
-    *err = 0;
-    if (str == NULL) {
-        *err = 2; // Invalid input (NULL pointer)
-        return NULL;
-    }
-
-    // Check total length to prevent buffer overflows
-    size_t total_len = strlen(str);
-    if (total_len > 10) { // Max: 6 chars callsign + '-' + 2 digits SSID + '*'
-        *err = 4; // Invalid string length
-        return NULL;
-    }
-
-    ax25_address_t *addr = malloc(sizeof(ax25_address_t));
-    if (!addr) {
-        *err = 1; // Memory allocation failure
-        return NULL;
-    }
-
-    char callsign[7] = { 0 }; // 6 chars + null terminator
-    int ssid = 0;
-    bool ch = false;
-
-    const char *dash = strchr(str, '-');
-    if (dash) {
-        size_t callsign_len = dash - str;
-        if (callsign_len == 0) {
-            *err = 4; // Invalid callsign length (empty)
-            free(addr);
-            return NULL;
-        }
-        // Truncate callsign to 6 characters if longer
-        if (callsign_len > 6) {
-            callsign_len = 6;
-        }
-        strncpy(callsign, str, callsign_len);
-        callsign[callsign_len] = '\0';
-
-        const char *ssid_str = dash + 1;
-        size_t ssid_len = strlen(ssid_str);
-
-        // Validate SSID: must be digits optionally followed by '*'
-        if (ssid_len == 0) {
-            *err = 4; // No SSID provided after dash
-            free(addr);
-            return NULL;
-        }
-
-        const char *p = ssid_str;
-        while (*p && isdigit((unsigned char )*p))
-            p++;
-        if (*p == '*') {
-            ch = true;
-            p++;
-        }
-        if (*p != '\0') {
-            *err = 5; // Invalid character after SSID
-            free(addr);
-            return NULL;
-        }
-
-        // Ensure at least one digit is present
-        if (p - ssid_str - (ch ? 1 : 0) == 0) {
-            *err = 4; // No digits in SSID
-            free(addr);
-            return NULL;
-        }
-
-        char *endptr;
-        ssid = strtol(ssid_str, &endptr, 10);
-        // Check if strtol parsed all digits and stopped at '*' or '\0'
-        if ((ch && endptr != ssid_str + (p - ssid_str - 1)) || (!ch && endptr != p) || ssid < 0 || ssid > 15) {
-            *err = 4; // Invalid SSID value or range
-            free(addr);
-            return NULL;
-        }
-    } else {
-        size_t len = strlen(str);
-        const char *star = strchr(str, '*');
-        if (star) {
-            if (star != str + len - 1) {
-                *err = 6; // '*' not at the end
-                free(addr);
-                return NULL;
-            }
-            len = star - str;
-            ch = true;
-        }
-        if (len == 0) {
-            *err = 4; // Invalid callsign length
-            free(addr);
-            return NULL;
-        }
-        // Truncate callsign to 6 characters if longer
-        if (len > 6) {
-            len = 6;
-        }
-        strncpy(callsign, str, len);
-        callsign[len] = '\0';
-        ssid = 0;
-    }
-
-    strncpy(addr->callsign, callsign, 6);
-    addr->callsign[6] = '\0';
-    addr->ssid = ssid & 0x0F;
-    addr->ch = ch;
-    addr->res0 = true;
-    addr->res1 = true;
-    addr->extension = false;
-    return addr;
-}
-*/
-
 ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err) {
     *err = 0;
     if (str == NULL) {
@@ -268,7 +153,8 @@ ax25_address_t* ax25_address_from_string(const char *str, uint8_t *err) {
         }
 
         const char *p = ssid_str;
-        while (*p && isdigit((unsigned char)*p)) p++;
+        while (*p && isdigit((unsigned char )*p))
+            p++;
         if (*p == '*') {
             ch = true;
             p++;
@@ -370,40 +256,6 @@ ax25_address_t* ax25_address_copy(const ax25_address_t *addr, uint8_t *err) {
 void ax25_address_free(ax25_address_t *addr, uint8_t *err) {
     free(addr);
 }
-
-/*
-ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num, uint8_t *err) {
-    *err = 0;
-
-    // Validate input parameters
-    if (repeaters == NULL || num <= 0 || num > MAX_REPEATERS) {
-        *err = 2; // Invalid input
-        return NULL;
-    }
-
-    // Allocate memory for the path
-    ax25_path_t *path = malloc(sizeof(ax25_path_t));
-    if (!path) {
-        *err = 1; // Memory allocation failure
-        return NULL;
-    }
-
-    // Set the number of repeaters
-    path->num_repeaters = num;
-
-    // Copy repeater addresses, checking for NULL pointers
-    for (int i = 0; i < num; i++) {
-        if (repeaters[i] == NULL) {
-            *err = 2; // Invalid repeater address
-            free(path);
-            return NULL;
-        }
-        path->repeaters[i] = *repeaters[i];
-    }
-
-    return path;
-}
-*/
 
 ax25_path_t* ax25_path_new(ax25_address_t **repeaters, int num, uint8_t *err) {
     *err = 0;
@@ -1486,6 +1338,18 @@ void ax25_xid_deinit_defaults(uint8_t *err) {
     FREE_XID_PARAM(AX25_22_DEFAULT_XID_RETRIES);
 
 #undef FREE_XID_PARAM
+}
+
+bool is_modulo128_used(ax25_frame_t *sabme, ax25_frame_t *response) {
+    if (sabme->type != AX25_FRAME_UNNUMBERED_SABME) {
+        return false;
+    }
+    if (response->type == AX25_FRAME_UNNUMBERED_UA) {
+        return true; // UA response to SABME indicates modulo-128
+    } else if (response->type == AX25_FRAME_UNNUMBERED_DM || response->type == AX25_FRAME_UNNUMBERED_FRMR) {
+        return false; // DM or FRMR response indicates fallback to modulo-8
+    }
+    return false; // Default case, assume modulo-8 if unknown response
 }
 
 ax25_segmented_info_t* ax25_segment_info_fields(const uint8_t *payload, size_t payload_len, size_t n1, uint8_t *err, size_t *num_segments) {

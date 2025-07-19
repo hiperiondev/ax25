@@ -883,4 +883,6 @@ uint8_t* ax25_reassemble_info_fields(ax25_segmented_info_t *info_fields, size_t 
 // Function to free the memory allocated for segmented info fields
 void ax25_free_segmented_info(ax25_segmented_info_t *segments, size_t num_segments);
 
+bool is_modulo128_used(ax25_frame_t *sabme, ax25_frame_t *response);
+
 #endif /* AX25_H_ */
